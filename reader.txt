@@ -1,0 +1,65 @@
+# vbbroute · VBB Multi-Fahrinfo
+
+Statische Single-File-App, die bis zu **3 Start-** und **3 Zielorte** entgegennimmt und alle Kombinationen (max. 9) parallel über die VBB-Fahrinfo abfragt. Sortiert nach **Früheste Ankunft** oder **Kürzeste Dauer**, ausklappbare Detailansicht je Verbindung mit Linien, Umstiegen, Gleisen, Verspätung und Hinweisen.
+
+**Repo**: [stefkowski-cpu/vbbroute](https://github.com/stefkowski-cpu/vbbroute)
+**Live (nach Pages-Aktivierung)**: `https://stefkowski-cpu.github.io/vbbroute/`
+
+## Tech
+
+- Reines `index.html` (Vanilla JS, kein Build, kein Backend)
+- Daten: `https://v6.vbb.transport.rest` (HAFAS-Wrapper auf VBB, kein Key, CORS aktiv, 100 Req/min)
+- Theme dunkel als Default, Toggle hell, persistiert in `localStorage`
+- Letzte Suche (Slots, Modus, Sortierung) wird ebenfalls persistiert
+- GPS-Standort und „Nähe №1” via `/locations/nearby`
+- Erkennt `file://`-Origin und blendet einen Hinweis ein, falls die Seite nicht über http(s) läuft
+
+## Hochladen ins Repo (GUI)
+
+1. Öffne https://github.com/stefkowski-cpu/vbbroute
+1. **Add file → Upload files**
+1. `index.html`, `README.md` und `CLAUDE.md` per Drag & Drop in den Browser ziehen
+1. Commit message z.B. `initial: multi-fahrinfo skeleton` → **Commit changes**
+
+## GitHub Pages aktivieren (GUI)
+
+1. Im Repo: **Settings** → linke Spalte **Pages**
+1. **Source**: `Deploy from a branch`
+1. **Branch**: `main`, Folder: `/ (root)` → **Save**
+1. Nach 30–60 Sekunden ist die App unter `https://stefkowski-cpu.github.io/vbbroute/` live
+1. Zum Test direkt auf dem iPhone diese URL öffnen — der „Load failed”-Fehler aus dem `file://`-Test ist damit weg
+
+## Nutzung
+
+Pro Eingabefeld drei Wege zur Auswahl:
+
+- **Tippen** → die API liefert Haltestellen, Adressen und POIs gemischt; aus der Liste wählen (Auswahl ist Pflicht, Freitext greift nicht).
+- **GPS-Button** → Browser fragt nach Standortberechtigung, dann werden die nächsten Haltestellen mit Geh-Distanz angezeigt.
+- **Nähe №1** (nur in Slot 2/3) → listet Haltestellen rund um die in Slot №1 derselben Spalte gewählte Position. Praktisch für Treffpunkt-Planung.
+
+Zeitmodus: **Jetzt**, **Abfahrt um …** oder **Ankunft um …**. Bei den letzten beiden erscheint ein Datums-/Zeitfeld.
+
+Sortierung der Ergebnisse: **Früh. Ankunft** (Default) oder **Kürzeste Dauer**. Beste Verbindung wird gelb gerahmt, Verspätungen rot, pünktlich-grüner Punkt.
+
+## Lokal testen (optional)
+
+```bash
+python3 -m http.server 8000
+# → http://localhost:8000
+```
+
+Vom iPhone aus mit derselben WLAN-Verbindung: `http://<Mac-IP>:8000`.
+
+## Bekannte Grenzen
+
+- Kein Ticketkauf, kein Nutzerkonto — die API liefert ausschließlich Fahrinfo (gleiche Datenbasis wie die offizielle App).
+- Bei kleinen oder uneindeutigen Adressen liefert die HAFAS-Geocodierung gelegentlich nur grobe Punkte; bei Bedarf POI oder nahe Haltestelle wählen.
+- Rate-Limit: 100 Requests/Minute (Burst 200). Bei max. 3×3 + Autocomplete-Tipping kein Thema, beachten falls später Auto-Refresh dazukommt.
+
+## Mögliche Erweiterungen
+
+- Mehrere Verbindungsalternativen je Paar (results > 1) statt nur der besten
+- Matrix-Darstellung (3×3 Grid) zusätzlich zur sortierten Liste
+- Favoriten / benannte Orts-Sets („Familie”, „Treffpunkte Mitte” …)
+- Export der besten Verbindung als ICS-Kalendereintrag
+- Luftlinien-Distanz statt Geh-Distanz für „Nähe №1”
