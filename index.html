@@ -1,0 +1,3194 @@
+<!DOCTYPE html>
+
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#1a1a1a">
+<meta name="description" content="VBB Multi-Fahrinfo: bis zu 3 Start- und Zielorte gleichzeitig vergleichen.">
+<title>VBB · Multi-Fahrinfo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1a1a1a;
+    --bg-2: #262626;
+    --bg-3: #353535;
+    --line: #4a4a4a;
+    --line-2: #5e5e5e;
+    --fg: #f5f5f5;
+    --fg-2: #d4d4d4;
+    --fg-3: #9a9a9a;
+    --yellow: #e63946;
+    --yellow-soft: rgba(230,57,70,.16);
+    --red: #e63946;
+    --green: #888888;
+    --blue: #b0b0b0;
+    --purple: #c8c8c8;
+    --shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 8px 24px rgba(0,0,0,.5);
+    --r: 4px;
+  }
+  [data-theme="light"] {
+    --bg: #ebe8e2;
+    --bg-2: #ddd9d1;
+    --bg-3: #cbc6bb;
+    --line: #8a847780;
+    --line-2: #6e6859;
+    --fg: #141414;
+    --fg-2: #232323;
+    --fg-3: #4a4a4a;
+    --yellow: #c92128;
+    --yellow-soft: rgba(201,33,40,.16);
+    --red: #c92128;
+    --green: #3a3a3a;
+    --blue: #4a4a4a;
+    --purple: #5a5a5a;
+    --shadow: 0 1px 0 rgba(0,0,0,.05) inset, 0 6px 18px rgba(0,0,0,.10);
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    font-feature-settings: "ss01", "ss02";
+    -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    touch-action: manipulation;
+    overflow-x: hidden;
+    min-height: 100dvh;
+    background-image:
+      radial-gradient(circle at 0% 0%, rgba(214,48,49,.06), transparent 40%),
+      radial-gradient(circle at 100% 100%, rgba(180,180,180,.04), transparent 40%);
+  }
+  .mono { font-family: "IBM Plex Mono", monospace; font-feature-settings: "tnum" 1; }
+  /* ----- Header ----- */
+  header {
+    border-bottom: 1px solid var(--line);
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    backdrop-filter: blur(8px);
+  }
+  .header-inner {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 14px 18px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .brand {
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    font-size: 14px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .brand .dot {
+    width: 10px; height: 10px;
+    background: var(--yellow);
+    display: inline-block;
+    box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--yellow);
+  }
+  .brand small {
+    color: var(--fg-3);
+    font-weight: 500;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+  }
+  .theme-toggle {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--fg-2);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 6px 10px;
+    cursor: pointer;
+    border-radius: var(--r);
+  }
+  .theme-toggle:hover { color: var(--fg); border-color: var(--line-2); }
+  /* ----- Layout ----- */
+  main {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 24px 18px 80px;
+  }
+  h1.title {
+    font-family: "IBM Plex Serif", serif;
+    font-weight: 600;
+    font-size: clamp(28px, 5vw, 42px);
+    line-height: 1.05;
+    margin: 18px 0 6px;
+    letter-spacing: -0.01em;
+  }
+  .subtitle {
+    color: var(--fg-2);
+    font-size: 14px;
+    max-width: 560px;
+    line-height: 1.5;
+    margin-bottom: 28px;
+  }
+  .subtitle b { color: var(--yellow); font-weight: 600; }
+  /* ----- When toggle ----- */
+  .when-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    align-items: center;
+  }
+  .when-toggle {
+    display: inline-flex;
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    overflow: hidden;
+    background: var(--bg-2);
+  }
+  .when-toggle button {
+    background: transparent;
+    border: 0;
+    color: var(--fg-2);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 9px 14px;
+    cursor: pointer;
+    border-right: 1px solid var(--line);
+  }
+  .when-toggle button:last-child { border-right: 0; }
+  .when-toggle button[aria-pressed="true"] {
+    background: var(--yellow);
+    color: #ffffff;
+    font-weight: 600;
+  }
+  .when-input {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    color: var(--fg);
+    -webkit-text-fill-color: var(--fg);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 16px;
+    padding: 8px 10px;
+    border-radius: var(--r);
+    color-scheme: light;
+  }
+  [data-theme="dark"] .when-input { color-scheme: dark; }
+  .when-input:focus { outline: 2px solid var(--yellow); border-color: var(--yellow); }
+  /* ----- Inputs grid ----- */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 18px;
+    margin-bottom: 20px;
+    position: relative;
+  }
+  @media (min-width: 720px) {
+    .grid { grid-template-columns: 1fr 1fr; gap: 20px; }
+  }
+  .col {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    padding: 16px;
+    border-radius: var(--r);
+    position: relative;
+  }
+  .col h2 {
+    margin: 0 0 12px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--fg-3);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .col h2::before {
+    content: "";
+    width: 14px;
+    height: 2px;
+    background: var(--yellow);
+  }
+  .col[data-role="to"] h2::before { background: var(--fg-3); }
+
+.swap-btn {
+position: absolute;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
+z-index: 5;
+background: var(–bg-3);
+border: 1px solid var(–line-2);
+color: var(–fg);
+width: 36px;
+height: 36px;
+border-radius: 50%;
+cursor: pointer;
+font-size: 16px;
+display: none;
+align-items: center;
+justify-content: center;
+box-shadow: var(–shadow);
+transition: all .15s;
+}
+.swap-btn:hover {
+background: var(–yellow);
+color: #ffffff;
+border-color: var(–yellow);
+transform: translate(-50%, -50%) rotate(180deg);
+}
+@media (min-width: 720px) {
+.swap-btn { display: inline-flex; }
+}
+.swap-btn-mobile {
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 6px;
+width: 100%;
+background: var(–bg-2);
+border: 1px solid var(–line);
+color: var(–fg-2);
+font-family: “IBM Plex Mono”, monospace;
+font-size: 11px;
+letter-spacing: 0.08em;
+text-transform: uppercase;
+padding: 9px;
+cursor: pointer;
+border-radius: var(–r);
+margin: -8px 0 12px;
+transition: all .15s;
+}
+.swap-btn-mobile:hover {
+color: var(–yellow);
+border-color: var(–yellow);
+}
+@media (min-width: 720px) {
+.swap-btn-mobile { display: none; }
+}
+
+.sug-lines {
+grid-area: lines;
+display: flex;
+gap: 4px;
+flex-wrap: wrap;
+align-items: center;
+min-width: 0;
+}
+.sug-line {
+font-family: “IBM Plex Mono”, monospace;
+font-size: 10px;
+font-weight: 700;
+padding: 2px 5px;
+border-radius: 2px;
+color: #fff;
+letter-spacing: 0;
+line-height: 1.3;
+white-space: nowrap;
+}
+.sug-line-more {
+font-family: “IBM Plex Mono”, monospace;
+font-size: 10px;
+color: var(–fg-3);
+align-self: center;
+}
+.slots { display: flex; flex-direction: column; gap: 8px; }
+.slot { position: relative; z-index: 1; }
+.slot:focus-within { z-index: 50; }
+.slot-input-wrap {
+display: flex;
+align-items: stretch;
+background: var(–bg);
+border: 1px solid var(–line);
+border-radius: var(–r);
+overflow: hidden;
+transition: border-color .15s;
+}
+.slot-input-wrap:focus-within { border-color: var(–yellow); }
+.slot-num {
+background: var(–bg-3);
+border-right: 1px solid var(–line);
+color: var(–fg-3);
+font-family: “IBM Plex Mono”, monospace;
+font-size: 11px;
+font-weight: 600;
+padding: 0 10px;
+display: flex;
+align-items: center;
+min-width: 28px;
+}
+.slot input {
+flex: 1;
+background: transparent;
+border: 0;
+color: #141414;
+-webkit-text-fill-color: #141414;
+font-family: “IBM Plex Sans”, sans-serif;
+font-size: 16px;
+padding: 10px 12px;
+width: 100%;
+min-width: 0;
+-webkit-appearance: none;
+appearance: none;
+color-scheme: light;
+}
+.slot input::placeholder {
+color: #4a4a4a;
+-webkit-text-fill-color: #4a4a4a;
+opacity: 1;
+}
+body.theme-dark .slot input,
+[data-theme=“dark”] .slot input {
+color: #ffffff !important;
+-webkit-text-fill-color: #ffffff !important;
+color-scheme: dark;
+}
+body.theme-dark .slot input::placeholder,
+[data-theme=“dark”] .slot input::placeholder {
+color: #aaaaaa !important;
+-webkit-text-fill-color: #aaaaaa !important;
+opacity: 1;
+}
+.slot input:focus { outline: none; }
+.slot-clear {
+background: transparent;
+border: 0;
+color: var(–fg-3);
+cursor: pointer;
+padding: 0 12px;
+font-family: “IBM Plex Mono”, monospace;
+font-size: 16px;
+}
+.slot-clear:hover { color: var(–red); }
+.slot.picked .slot-input-wrap {
+background: var(–yellow-soft);
+border-color: var(–yellow);
+}
+.col[data-role=“to”] .slot.picked .slot-input-wrap {
+background: var(–bg-3);
+border-color: var(–line-2);
+}
+.slot-tools {
+display: flex;
+gap: 6px;
+margin-top: 6px;
+flex-wrap: wrap;
+}
+.slot-tool {
+background: transparent;
+border: 1px solid var(–line);
+color: var(–fg-2);
+font-family: “IBM Plex Mono”, monospace;
+font-size: 10px;
+letter-spacing: 0.06em;
+text-transform: uppercase;
+padding: 5px 9px;
+cursor: pointer;
+border-radius: var(–r);
+display: inline-flex;
+align-items: center;
+gap: 5px;
+transition: all .15s;
+}
+.slot-tool:hover { color: var(–yellow); border-color: var(–yellow); }
+.slot-tool[data-action=“gps”] {
+border-color: var(–fg-3);
+color: var(–fg);
+}
+.slot-tool[data-action=“gps”]:hover {
+background: var(–bg-3);
+color: var(–fg);
+border-color: var(–fg-2);
+}
+.slot-tool[data-action=“maps-gps”], .slot-tool[data-action=“maps-from1”] {
+display: none;
+border-color: var(–fg-3);
+color: var(–fg);
+}
+.slot.picked .slot-tool[data-action=“maps-gps”] { display: inline-flex; }
+.slot.show-from1-maps .slot-tool[data-action=“maps-from1”] { display: inline-flex; }
+.slot-tool[data-action=“maps-gps”]:hover,
+.slot-tool[data-action=“maps-from1”]:hover {
+background: var(–bg-3);
+color: var(–fg);
+border-color: var(–fg-2);
+}
+.suggestion.suggestion-self {
+background: var(–yellow-soft);
+border-bottom: 2px solid var(–yellow);
+}
+.suggestion.suggestion-self .sug-type {
+color: var(–yellow);
+border-color: var(–yellow);
+}
+.suggestion.suggestion-self .sug-name {
+font-weight: 600;
+}
+.slot-tool .ico {
+width: 9px; height: 9px;
+border: 1.5px solid currentColor;
+border-radius: 50%;
+position: relative;
+display: inline-block;
+}
+.slot-tool .ico::after {
+content: “”;
+position: absolute;
+inset: 50%;
+width: 2px; height: 2px;
+margin: -1px 0 0 -1px;
+background: currentColor;
+border-radius: 50%;
+}
+.slot-tool[data-loading=“true”] {
+opacity: 0.6; pointer-events: none;
+}
+.slot-tool[data-loading=“true”] .ico {
+animation: spin 0.8s linear infinite;
+border-style: dashed;
+}
+@keyframes spin {
+to { transform: rotate(360deg); }
+}
+.sug-distance {
+grid-area: dist;
+font-family: “IBM Plex Mono”, monospace;
+font-size: 11px;
+color: var(–fg-2);
+flex-shrink: 0;
+letter-spacing: 0.04em;
+text-align: right;
+align-self: start;
+}
+.file-warning {
+background: rgba(230,57,70,.12);
+border: 1px solid var(–red);
+color: var(–red);
+padding: 12px 14px;
+border-radius: var(–r);
+margin-bottom: 18px;
+font-size: 13px;
+line-height: 1.5;
+}
+.file-warning b { font-family: “IBM Plex Mono”, monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+.file-warning code { font-family: “IBM Plex Mono”, monospace; background: rgba(0,0,0,.3); padding: 1px 5px; border-radius: 2px; font-size: 12px; }
+.suggestions {
+position: fixed;
+background: #ffffff;
+border: 2px solid #847e72;
+border-radius: 4px;
+box-shadow: 0 12px 32px rgba(0,0,0,.25), 0 4px 8px rgba(0,0,0,.15);
+z-index: 9999;
+max-height: 50vh;
+overflow-y: auto;
+isolation: isolate;
+}
+body.theme-dark .suggestions,
+[data-theme=“dark”] .suggestions {
+background: #1a1f28 !important;
+border-color: #5e5e5e;
+box-shadow: 0 12px 32px rgba(0,0,0,.7), 0 4px 8px rgba(0,0,0,.5);
+}
+.suggestion {
+padding: 10px 12px;
+cursor: pointer;
+border-bottom: 1px solid #b5b1a8;
+font-size: 14px;
+background: #ffffff;
+color: #141414;
+display: block;
+}
+body.theme-dark .suggestion,
+[data-theme=“dark”] .suggestion {
+background: #1a1f28 !important;
+color: #f5f5f5 !important;
+border-bottom-color: #4a4a4a;
+}
+.suggestion:last-child { border-bottom: 0; }
+.suggestion:hover, .suggestion[aria-selected=“true”] {
+background: #ddd9d1 !important;
+}
+body.theme-dark .suggestion:hover,
+body.theme-dark .suggestion[aria-selected=“true”],
+[data-theme=“dark”] .suggestion:hover,
+[data-theme=“dark”] .suggestion[aria-selected=“true”] {
+background: #2a3140 !important;
+}
+.suggestion-row1 {
+display: flex;
+align-items: center;
+gap: 10px;
+width: 100%;
+}
+.suggestion .sug-type {
+flex: 0 0 auto;
+}
+.suggestion .sug-name {
+flex: 1 1 auto;
+min-width: 0;
+overflow: hidden;
+text-overflow: ellipsis;
+white-space: nowrap;
+text-align: left;
+color: #141414;
+font-weight: 500;
+}
+body.theme-dark .suggestion .sug-name,
+[data-theme=“dark”] .suggestion .sug-name {
+color: #f5f5f5 !important;
+}
+.suggestion .sug-distance {
+flex: 0 0 auto;
+text-align: right;
+color: #2e2e2e;
+}
+body.theme-dark .suggestion .sug-distance,
+[data-theme=“dark”] .suggestion .sug-distance {
+color: #d4d4d4 !important;
+}
+.suggestion .sug-lines {
+margin-top: 6px;
+margin-left: calc(28px + 10px); /* approx width of type badge + gap */
+}
+.suggestion:last-child { border-bottom: 0; }
+.suggestion:hover, .suggestion[aria-selected=“true”] { background: var(–bg-2); }
+.sug-type {
+grid-area: type;
+font-family: “IBM Plex Mono”, monospace;
+font-size: 9px;
+letter-spacing: 0.1em;
+text-transform: uppercase;
+color: #4a4a4a;
+padding: 3px 6px;
+border: 1px solid #847e72;
+border-radius: 2px;
+flex-shrink: 0;
+align-self: start;
+}
+body.theme-dark .sug-type,
+[data-theme=“dark”] .sug-type {
+color: #aaaaaa;
+border-color: #5e5e5e;
+}
+.sug-type[data-t=“stop”], .sug-type[data-t=“station”] { color: #c92128; border-color: #c92128; }
+body.theme-dark .sug-type[data-t=“stop”],
+body.theme-dark .sug-type[data-t=“station”],
+[data-theme=“dark”] .sug-type[data-t=“stop”],
+[data-theme=“dark”] .sug-type[data-t=“station”] { color: #e63946; border-color: #e63946; }
+.sug-type[data-t=“address”] { color: #4a4a4a; border-color: #4a4a4a; }
+body.theme-dark .sug-type[data-t=“address”],
+[data-theme=“dark”] .sug-type[data-t=“address”] { color: #b0b0b0; border-color: #b0b0b0; }
+.sug-type[data-t=“poi”] { color: #5a5a5a; border-color: #5a5a5a; }
+body.theme-dark .sug-type[data-t=“poi”],
+[data-theme=“dark”] .sug-type[data-t=“poi”] { color: #c8c8c8; border-color: #c8c8c8; }
+.sug-name {
+grid-area: name;
+min-width: 0;
+overflow: hidden;
+text-overflow: ellipsis;
+white-space: nowrap;
+color: #141414;
+font-weight: 500;
+}
+body.theme-dark .sug-name,
+[data-theme=“dark”] .sug-name {
+color: #f5f5f5;
+}
+.sug-empty, .sug-loading {
+padding: 10px 12px;
+font-size: 12px;
+color: #4a4a4a;
+font-family: “IBM Plex Mono”, monospace;
+}
+body.theme-dark .sug-empty,
+body.theme-dark .sug-loading,
+[data-theme=“dark”] .sug-empty,
+[data-theme=“dark”] .sug-loading {
+color: #aaaaaa;
+}
+.sug-error {
+padding: 10px 12px;
+font-size: 12px;
+color: #c92128;
+font-family: “IBM Plex Mono”, monospace;
+background: rgba(201,33,40,.08);
+border-bottom: 1px solid #847e72;
+line-height: 1.5;
+}
+body.theme-dark .sug-error,
+[data-theme=“dark”] .sug-error {
+color: #e63946;
+background: rgba(230,57,70,.10);
+border-bottom-color: #4a4a4a;
+}
+.sug-error small {
+display: block;
+color: #232323;
+font-size: 10px;
+margin-top: 4px;
+letter-spacing: 0.04em;
+text-transform: uppercase;
+}
+body.theme-dark .sug-error small,
+[data-theme=“dark”] .sug-error small {
+color: #d4d4d4;
+}
+.sug-header {
+padding: 8px 12px;
+font-family: “IBM Plex Mono”, monospace;
+font-size: 10px;
+letter-spacing: 0.1em;
+text-transform: uppercase;
+color: #4a4a4a;
+background: #ddd9d1;
+border-bottom: 1px solid #847e72;
+}
+body.theme-dark .sug-header,
+[data-theme=“dark”] .sug-header {
+color: #aaaaaa;
+background: #262626;
+border-bottom-color: #4a4a4a;
+}
+.add-slot {
+background: transparent;
+border: 1px dashed var(–line-2);
+color: var(–fg-3);
+font-family: “IBM Plex Mono”, monospace;
+font-size: 11px;
+text-transform: uppercase;
+letter-spacing: 0.08em;
+padding: 9px 12px;
+cursor: pointer;
+border-radius: var(–r);
+margin-top: 8px;
+width: 100%;
+transition: all .15s;
+}
+.add-slot:hover { color: var(–fg); border-color: var(–fg-3); }
+.add-slot:disabled { opacity: 0.3; cursor: not-allowed; }
+/* —– Search button —– */
+.search-btn {
+width: 100%;
+background: var(–yellow);
+color: #0a0a0a;
+border: 0;
+font-family: “IBM Plex Mono”, monospace;
+font-size: 14px;
+font-weight: 700;
+letter-spacing: 0.12em;
+text-transform: uppercase;
+padding: 16px;
+cursor: pointer;
+border-radius: var(–r);
+transition: transform .08s;
+box-shadow: 0 4px 0 #6e1518;
+}
+.search-btn:hover { transform: translateY(-1px); box-shadow: 0 5px 0 #6e1518; }
+.search-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #6e1518; }
+.search-btn:disabled { background: var(–bg-3); color: var(–fg-3); cursor: not-allowed; box-shadow: none; }
+.reset-row {
+display: flex;
+gap: 6px;
+margin-bottom: 10px;
+flex-wrap: wrap;
+}
+.reset-btn {
+flex: 1;
+min-width: 90px;
+background: transparent;
+border: 1px solid var(–line);
+color: var(–fg-3);
+font-family: “IBM Plex Mono”, monospace;
+font-size: 10px;
+letter-spacing: 0.08em;
+text-transform: uppercase;
+padding: 8px 10px;
+cursor: pointer;
+border-radius: var(–r);
+transition: all .15s;
+}
+.reset-btn:hover { color: var(–red); border-color: var(–red); }
+.reset-btn[data-target=“all”]:hover { background: rgba(230,57,70,.08); }
+
+.dest-actions {
+display: flex;
+gap: 6px;
+margin-top: 8px;
+position: relative;
+justify-content: flex-end;
+}
+.dest-action-btn {
+background: transparent;
+border: 1px solid var(–line);
+color: var(–fg-2);
+font-size: 14px;
+cursor: pointer;
+border-radius: var(–r);
+transition: all .15s;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+width: 36px;
+height: 32px;
+flex-shrink: 0;
+}
+.dest-action-btn:hover {
+color: var(–yellow);
+border-color: var(–yellow);
+background: var(–yellow-soft);
+}
+.dest-action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.saved-popover {
+position: fixed;
+background: #ffffff !important;
+border: 2px solid var(–line-2);
+border-radius: var(–r);
+box-shadow: 0 12px 32px rgba(0,0,0,.18), 0 4px 8px rgba(0,0,0,.10);
+z-index: 9999;
+max-height: 50vh;
+overflow-y: auto;
+isolation: isolate;
+}
+[data-theme=“dark”] .saved-popover {
+background: #1a1f28 !important;
+box-shadow: 0 12px 32px rgba(0,0,0,.7), 0 4px 8px rgba(0,0,0,.5);
+}
+.saved-entry {
+padding: 10px 6px 10px 12px;
+border-bottom: 1px solid var(–line);
+display: flex;
+align-items: center;
+gap: 4px;
+}
+.saved-entry:last-child { border-bottom: 0; }
+.saved-entry-text {
+flex: 1;
+cursor: pointer;
+min-width: 0;
+padding: 4px 0;
+}
+.saved-entry-text:hover .saved-entry-name { color: var(–blue); }
+.saved-entry-name {
+font-size: 13px;
+font-weight: 600;
+color: var(–fg);
+overflow: hidden;
+text-overflow: ellipsis;
+white-space: nowrap;
+transition: color .15s;
+}
+.saved-entry-preview {
+font-family: “IBM Plex Mono”, monospace;
+font-size: 10px;
+color: var(–fg-3);
+margin-top: 3px;
+letter-spacing: 0.04em;
+overflow: hidden;
+text-overflow: ellipsis;
+white-space: nowrap;
+}
+.saved-entry-delete {
+background: transparent;
+border: 0;
+color: var(–fg-3);
+cursor: pointer;
+font-size: 18px;
+padding: 6px 10px;
+flex-shrink: 0;
+border-radius: var(–r);
+}
+.saved-entry-delete:hover { color: var(–red); background: rgba(230,57,70,.08); }
+.saved-empty {
+padding: 16px 12px;
+text-align: center;
+font-family: “IBM Plex Mono”, monospace;
+font-size: 11px;
+color: var(–fg-3);
+line-height: 1.6;
+}
+/* —– Results —– */
+.results-head {
+margin: 36px 0 12px;
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: 10px;
+flex-wrap: wrap;
+}
+.results-title {
+font-family: “IBM Plex Mono”, monospace;
+font-size: 11px;
+letter-spacing: 0.16em;
+text-transform: uppercase;
+color: var(–fg-3);
+}
+.sort-toggle {
+display: inline-flex;
+border: 1px solid var(–line);
+border-radius: var(–r);
+background: var(–bg-2);
+}
+.sort-toggle button {
+background: transparent;
+border: 0;
+color: var(–fg-2);
+font-family: “IBM Plex Mono”, monospace;
+font-size: 10px;
+letter-spacing: 0.08em;
+text-transform: uppercase;
+padding: 7px 11px;
+cursor: pointer;
+}
+.sort-toggle button[aria-pressed=“true”] { color: var(–yellow); }
+/* —– Earlier / Later pagination —– */
+.results-pagination {
+display: flex;
+gap: 10px;
+margin: 0 0 16px;
+}
+.results-pagination.is-bottom {
+margin: 16px 0 8px;
+}
+.page-btn {
+flex: 1;
+background: transparent;
+border: 2px solid #847e72;
+color: #141414;
+font-family: “IBM Plex Mono”, monospace;
+font-size: 12px;
+font-weight: 600;
+letter-spacing: 0.1em;
+text-transform: uppercase;
+padding: 12px 14px;
+cursor: pointer;
+border-radius: 4px;
+transition: all .15s;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+gap: 6px;
+min-height: 44px;
+}
+body.theme-dark .page-btn,
+[data-theme=“dark”] .page-btn {
+border-color: #5e5e5e;
+color: #f5f5f5;
+}
+.page-btn:hover, .page-btn:focus-visible {
+border-color: #c92128;
+color: #c92128;
+background: rgba(201,33,40,.08);
+outline: none;
+}
+body.theme-dark .page-btn:hover,
+body.theme-dark .page-btn:focus-visible,
+[data-theme=“dark”] .page-btn:hover,
+[data-theme=“dark”] .page-btn:focus-visible {
+border-color: #e63946;
+color: #e63946;
+background: rgba(230,57,70,.10);
+}
+.page-btn:active {
+transform: translateY(1px);
+}
+.page-btn[disabled] {
+opacity: 0.4;
+cursor: not-allowed;
+}
+.result {
+border: 2px solid var(–line);
+background: var(–bg-2);
+border-radius: var(–r);
+margin-bottom: 16px;
+overflow: hidden;
+box-shadow: 0 2px 8px rgba(0,0,0,.06);
+}
+[data-theme=“dark”] .result {
+box-shadow: 0 2px 8px rgba(0,0,0,.3);
+}
+.result.best {
+border-color: var(–yellow);
+box-shadow: 0 0 0 1px var(–yellow), 0 4px 12px rgba(214,48,49,.18);
+}
+.result-head {
+display: grid;
+grid-template-columns: 24px 1fr auto;
+gap: 12px;
+padding: 12px 14px;
+cursor: pointer;
+align-items: center;
+transition: background .15s;
+}
+.result-head:hover { background: var(–bg-3); }
+.rank {
+font-family: “IBM Plex Mono”, monospace;
+font-size: 11px;
+color: var(–fg-3);
+text-align: center;
+}
+.result.best .rank { color: var(–yellow); font-weight: 700; }
+.od {
+font-size: 13px;
+line-height: 1.4;
+overflow: hidden;
+}
+.od .from-name, .od .to-name {
+overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.od .arrow {
+color: var(–fg-3);
+margin: 0 6px;
+font-family: “IBM Plex Mono”, monospace;
+}
+.od .from-name { color: var(–fg); }
+.od .to-name { color: var(–fg); }
+.od-meta {
+font-family: “IBM Plex Mono”, monospace;
+font-size: 11px;
+color: var(–fg-3);
+margin-top: 3px;
+letter-spacing: 0.04em;
+}
+.times {
+text-align: right;
+font-family: “IBM Plex Mono”, monospace;
+font-feature-settings: “tnum” 1;
+}
+.times .time {
+font-size: 16px;
+font-weight: 600;
+letter-spacing: -0.01em;
+}
+.times .planned {
+text-decoration: line-through;
+color: var(–fg-3);
+font-size: 11px;
+margin-right: 4px;
+}
+.times .delay {
+color: var(–red);
+font-size: 11px;
+margin-left: 2px;
+}
+.times .ontime { color: #2a8a47; }
+[data-theme=“dark”] .times .ontime { color: #4ade80; }
+.times .duration {
+font-size: 11px;
+color: var(–fg-3);
+margin-top: 4px;
+letter-spacing: 0.04em;
+}
+.lines-row {
+display: flex;
+gap: 4px;
+padding: 0 14px 10px;
+flex-wrap: wrap;
+align-items: center;
+}
+.line-badge {
+font-family: “IBM Plex Mono”, monospace;
+font-size: 10px;
+font-weight: 700;
+padding: 2px 6px;
+border-radius: 2px;
+color: #fff;
+letter-spacing: 0.02em;
+}
+.line-badge.walk {
+background: transparent;
+color: #d4d4d4;
+border: 1px dashed #d4d4d4;
+font-weight: 600;
+}
+body.theme-light .line-badge.walk,
+[data-theme=“light”] .line-badge.walk {
+color: #141414 !important;
+border-color: #141414 !important;
+}
+.line-sep { color: var(–fg-3); font-family: “IBM Plex Mono”, monospace; font-size: 10px; }
+/* product colors */
+.p-suburban { background: #006e34; }
+.p-subway { background: #0067ad; }
+.p-tram { background: #be1414; }
+.p-bus { background: #a3007c; }
+.p-regional, .p-regionalExp { background: #ee7203; }
+.p-express, .p-nationalExpress, .p-national { background: #525252; }
+.p-ferry { background: #00a4d4; }
+.p-taxi { background: #f5c518; color: #000; }
+/* Details (expanded) */
+.details {
+border-top: 1px solid var(–line);
+background: var(–bg);
+padding: 14px 14px 16px;
+display: none;
+}
+.result.open .details { display: block; }
+.leg {
+display: grid;
+grid-template-columns: 90px 1fr;
+gap: 16px;
+padding: 8px 0;
+border-bottom: 1px solid var(–line);
+font-size: 13px;
+}
+.leg:last-child { border-bottom: 0; }
+.leg-times {
+font-family: “IBM Plex Mono”, monospace;
+font-feature-settings: “tnum” 1;
+font-size: 12px;
+color: var(–fg-2);
+line-height: 1.6;
+}
+.leg-times .top { color: var(–fg); font-size: 13px; font-weight: 600; }
+.leg-info { line-height: 1.5; min-width: 0; }
+.leg-stops {
+color: var(–fg-2);
+word-break: break-word;
+}
+.leg-stop-end {
+display: inline-block;
+background: var(–bg-3);
+border: 1px solid var(–line-2);
+color: var(–fg);
+font-weight: 700;
+padding: 1px 6px;
+border-radius: 3px;
+margin: 0 1px;
+}
+.leg-line-row {
+display: flex;
+align-items: center;
+gap: 6px;
+}
+.leg-line-row.expandable {
+cursor: pointer;
+user-select: none;
+margin: -4px -4px 0;
+padding: 4px;
+border-radius: var(–r);
+transition: background .15s;
+}
+.leg-line-row.expandable:hover {
+background: var(–bg-3);
+}
+.leg-toggle {
+margin-left: auto;
+color: var(–fg-3);
+font-size: 11px;
+font-family: “IBM Plex Mono”, monospace;
+}
+.leg-stopovers {
+margin-top: 8px;
+border-left: 2px solid var(–line-2);
+padding-left: 12px;
+margin-left: 4px;
+}
+.leg-stopovers[data-state=“closed”] { display: none; }
+.stopovers-loading, .stopovers-error {
+font-family: “IBM Plex Mono”, monospace;
+font-size: 11px;
+color: var(–fg-3);
+padding: 6px 0;
+}
+.stopovers-error { color: var(–red); }
+.stopover {
+display: grid;
+grid-template-columns: 44px 12px 1fr;
+align-items: center;
+gap: 8px;
+padding: 5px 0;
+font-size: 13px;
+}
+.stopover-time {
+font-family: “IBM Plex Mono”, monospace;
+font-feature-settings: “tnum” 1;
+font-size: 12px;
+color: var(–fg-2);
+text-align: left;
+}
+.stopover-dot {
+width: 8px;
+height: 8px;
+border-radius: 50%;
+background: var(–fg-3);
+border: 2px solid var(–bg-2);
+box-shadow: 0 0 0 1px var(–line-2);
+margin: 0 auto;
+}
+.stopover-end .stopover-dot {
+background: var(–yellow);
+box-shadow: 0 0 0 1px var(–yellow);
+}
+.stopover-name {
+color: var(–fg);
+overflow: hidden;
+text-overflow: ellipsis;
+white-space: nowrap;
+cursor: pointer;
+background: transparent;
+border: 0;
+text-align: left;
+padding: 0;
+font: inherit;
+min-width: 0;
+}
+.stopover-name:hover, .stopover-name:focus-visible {
+color: var(–yellow);
+outline: none;
+}
+.stopover-end .stopover-name {
+font-weight: 700;
+}
+/* —– Stop-name overlay (full text + pin action) —– */
+.stop-overlay {
+position: fixed;
+inset: 0;
+background: rgba(0,0,0,.5);
+z-index: 10000;
+display: flex;
+align-items: center;
+justify-content: center;
+padding: 24px;
+animation: stopOverlayFade .12s ease-out;
+}
+@keyframes stopOverlayFade {
+from { opacity: 0; }
+to { opacity: 1; }
+}
+.stop-overlay-card {
+background: #ffffff;
+color: #141414;
+border-radius: 6px;
+box-shadow: 0 24px 48px rgba(0,0,0,.4);
+max-width: 480px;
+width: 100%;
+padding: 20px 22px 18px;
+border: 2px solid #847e72;
+}
+body.theme-dark .stop-overlay-card,
+[data-theme=“dark”] .stop-overlay-card {
+background: #1a1f28;
+color: #f5f5f5;
+border-color: #5e5e5e;
+}
+.stop-overlay-label {
+font-family: “IBM Plex Mono”, monospace;
+font-size: 10px;
+letter-spacing: 0.16em;
+text-transform: uppercase;
+color: #4a4a4a;
+margin-bottom: 8px;
+}
+body.theme-dark .stop-overlay-label,
+[data-theme=“dark”] .stop-overlay-label {
+color: #aaaaaa;
+}
+.stop-overlay-name {
+font-family: “IBM Plex Sans”, sans-serif;
+font-size: 22px;
+font-weight: 600;
+line-height: 1.3;
+margin-bottom: 6px;
+word-wrap: break-word;
+}
+.stop-overlay-time {
+font-family: “IBM Plex Mono”, monospace;
+font-size: 14px;
+color: #4a4a4a;
+margin-bottom: 16px;
+}
+body.theme-dark .stop-overlay-time,
+[data-theme=“dark”] .stop-overlay-time {
+color: #b0b0b0;
+}
+.stop-overlay-actions {
+display: flex;
+gap: 8px;
+flex-wrap: wrap;
+}
+.stop-overlay-actions button {
+flex: 1;
+min-height: 40px;
+background: transparent;
+border: 1px solid #847e72;
+color: #141414;
+font-family: “IBM Plex Mono”, monospace;
+font-size: 11px;
+font-weight: 600;
+letter-spacing: 0.08em;
+text-transform: uppercase;
+padding: 8px 10px;
+cursor: pointer;
+border-radius: 4px;
+transition: all .15s;
+}
+body.theme-dark .stop-overlay-actions button,
+[data-theme=“dark”] .stop-overlay-actions button {
+border-color: #5e5e5e;
+color: #f5f5f5;
+}
+.stop-overlay-actions button.primary {
+background: #c92128;
+border-color: #c92128;
+color: #ffffff;
+}
+body.theme-dark .stop-overlay-actions button.primary,
+[data-theme=“dark”] .stop-overlay-actions button.primary {
+background: #e63946;
+border-color: #e63946;
+color: #0a0a0a;
+}
+.stop-overlay-actions button:hover, .stop-overlay-actions button:focus-visible {
+transform: translateY(-1px);
+outline: none;
+}
+.leg-meta {
+font-size: 11px;
+color: var(–fg-3);
+margin-top: 3px;
+font-family: “IBM Plex Mono”, monospace;
+}
+.leg-walk-badge {
+display: inline-flex;
+align-items: center;
+gap: 4px;
+background: transparent;
+border: 1px dashed #2e2e2e;
+color: #2e2e2e;
+font-family: “IBM Plex Mono”, monospace;
+font-size: 11px;
+font-weight: 600;
+letter-spacing: 0.02em;
+padding: 4px 9px;
+border-radius: 3px;
+cursor: pointer;
+transition: all .15s;
+text-align: left;
+line-height: 1.3;
+}
+body.theme-dark .leg-walk-badge,
+[data-theme=“dark”] .leg-walk-badge {
+border-color: #d4d4d4;
+color: #d4d4d4;
+}
+.leg-walk-badge:hover, .leg-walk-badge:focus-visible {
+background: rgba(0,0,0,.06);
+border-style: solid;
+outline: none;
+}
+body.theme-dark .leg-walk-badge:hover,
+body.theme-dark .leg-walk-badge:focus-visible,
+[data-theme=“dark”] .leg-walk-badge:hover,
+[data-theme=“dark”] .leg-walk-badge:focus-visible {
+background: rgba(255,255,255,.08);
+}
+.leg-walk-badge[disabled] {
+cursor: default;
+opacity: 0.7;
+}
+.leg-walk-badge[disabled]:hover {
+background: transparent;
+border-style: dashed;
+}
+/* Static (non-clickable) walk indicator if no coords available */
+.leg-walk-static {
+display: inline-block;
+border: 1px dashed #2e2e2e;
+color: #2e2e2e;
+font-family: “IBM Plex Mono”, monospace;
+font-size: 11px;
+font-weight: 600;
+letter-spacing: 0.02em;
+padding: 4px 9px;
+border-radius: 3px;
+}
+body.theme-dark .leg-walk-static,
+[data-theme=“dark”] .leg-walk-static {
+border-color: #d4d4d4;
+color: #d4d4d4;
+}
+/* Status messages */
+.alert {
+padding: 14px;
+border: 1px solid var(–line);
+border-radius: var(–r);
+background: var(–bg-2);
+color: var(–fg-2);
+font-size: 13px;
+margin: 12px 0;
+}
+.alert.error { border-color: var(–red); color: var(–red); }
+.loading-bar {
+height: 2px;
+background: var(–line);
+overflow: hidden;
+position: relative;
+margin: 14px 0;
+}
+.loading-bar::after {
+content: “”;
+position: absolute;
+inset: 0;
+background: var(–yellow);
+width: 30%;
+animation: slide 1.2s infinite ease-in-out;
+}
+@keyframes slide {
+0% { transform: translateX(-100%); }
+100% { transform: translateX(400%); }
+}
+/* Footer */
+/* —– Netzplan section —– */
+.netzplan-section {
+margin: 40px 0 24px;
+border-top: 1px solid var(–line);
+padding-top: 24px;
+}
+.netzplan-toggle {
+width: 100%;
+background: var(–bg-2);
+border: 2px solid var(–line);
+color: var(–fg);
+font-family: “IBM Plex Mono”, monospace;
+font-size: 13px;
+font-weight: 600;
+letter-spacing: 0.08em;
+text-transform: uppercase;
+padding: 14px 16px;
+cursor: pointer;
+border-radius: var(–r);
+display: flex;
+align-items: center;
+gap: 12px;
+transition: all .15s;
+}
+.netzplan-toggle:hover {
+border-color: var(–yellow);
+color: var(–yellow);
+}
+.netzplan-toggle[aria-expanded=“true”] {
+border-color: var(–yellow);
+color: var(–yellow);
+border-bottom-left-radius: 0;
+border-bottom-right-radius: 0;
+border-bottom: 0;
+padding-bottom: 16px;
+}
+.netzplan-icon { font-size: 18px; }
+.netzplan-title { flex: 1; text-align: left; }
+.netzplan-arrow {
+font-family: “IBM Plex Mono”, monospace;
+font-size: 14px;
+transition: transform .2s;
+}
+.netzplan-toggle[aria-expanded=“true”] .netzplan-arrow {
+transform: rotate(180deg);
+}
+.netzplan-body {
+border: 2px solid var(–yellow);
+border-top: 0;
+border-radius: 0 0 var(–r) var(–r);
+padding: 16px;
+background: var(–bg-2);
+}
+.netzplan-intro {
+margin: 0 0 14px;
+font-size: 12px;
+color: var(–fg-2);
+line-height: 1.5;
+}
+.netzplan-grid {
+display: grid;
+grid-template-columns: 1fr;
+gap: 8px;
+}
+@media (min-width: 540px) {
+.netzplan-grid { grid-template-columns: 1fr 1fr; }
+}
+.netzplan-card {
+display: flex;
+align-items: center;
+gap: 12px;
+padding: 12px;
+background: var(–bg);
+border: 1px solid var(–line);
+border-radius: var(–r);
+text-decoration: none;
+color: var(–fg);
+transition: all .15s;
+min-height: 64px;
+}
+.netzplan-card:hover {
+border-color: var(–yellow);
+background: var(–yellow-soft);
+transform: translateY(-1px);
+box-shadow: 0 4px 8px rgba(0,0,0,.08);
+}
+.netzplan-card-tag {
+font-family: “IBM Plex Mono”, monospace;
+font-weight: 700;
+font-size: 11px;
+color: #ffffff;
+padding: 6px 8px;
+border-radius: 3px;
+flex-shrink: 0;
+min-width: 50px;
+text-align: center;
+letter-spacing: 0.04em;
+}
+.netzplan-card-tag[data-c=“rail”]    { background: #006e34; }
+.netzplan-card-tag[data-c=“tram”]    { background: #be1414; }
+.netzplan-card-tag[data-c=“bus”]     { background: #a3007c; }
+.netzplan-card-tag[data-c=“regional”]{ background: #ee7203; }
+.netzplan-card-tag[data-c=“night”]   { background: #1a1a3a; }
+.netzplan-card-tag[data-c=“link”]    {
+background: transparent;
+color: var(–fg-2);
+border: 1px solid var(–line-2);
+}
+.netzplan-card-name {
+flex: 1;
+font-weight: 600;
+font-size: 13px;
+line-height: 1.3;
+overflow: hidden;
+}
+.netzplan-card-meta {
+display: block;
+font-family: “IBM Plex Mono”, monospace;
+font-size: 10px;
+color: var(–fg-3);
+font-weight: 400;
+margin-top: 3px;
+letter-spacing: 0.02em;
+}
+.netzplan-card-name {
+display: flex;
+flex-direction: column;
+justify-content: center;
+}
+
+footer {
+max-width: 980px;
+margin: 0 auto;
+padding: 0 18px 40px;
+color: var(–fg-3);
+font-family: “IBM Plex Mono”, monospace;
+font-size: 10px;
+letter-spacing: 0.06em;
+text-transform: uppercase;
+line-height: 1.7;
+}
+footer a { color: var(–fg-2); text-decoration: none; }
+footer a:hover { color: var(–yellow); }
+/* small screens */
+@media (max-width: 480px) {
+.header-inner { padding: 12px 14px; }
+main { padding: 18px 14px 60px; }
+h1.title { font-size: 26px; }
+.col { padding: 12px; }
+.result-head { grid-template-columns: 18px 1fr auto; gap: 8px; padding: 10px 12px; }
+.lines-row { padding: 0 12px 9px; }
+.leg { grid-template-columns: 76px 1fr; gap: 12px; }
+}
+</style>
+
+</head>
+<body data-theme="light">
+<header>
+  <div class="header-inner">
+    <div class="brand">
+      <span class="dot"></span>
+      VBB Multi-Fahrinfo
+      <small>// Berlin · Brandenburg</small>
+    </div>
+    <button class="theme-toggle" id="themeBtn" type="button" aria-label="Theme wechseln">DARK</button>
+  </div>
+</header>
+<main>
+  <div id="protocolWarn"></div>
+  <h1 class="title">Drei Starts. Drei Ziele. Beste Verbindung.</h1>
+  <p class="subtitle">Gib bis zu drei Start- und drei Zielorte ein — Haltestelle, Adresse oder POI. Es werden alle Kombinationen abgefragt und nach <b>Ankunft</b> oder <b>Dauer</b> sortiert.</p>
+
+  <div class="when-row">
+    <div class="when-toggle" role="group" aria-label="Zeitmodus">
+      <button type="button" data-when="now" aria-pressed="true">Jetzt</button>
+      <button type="button" data-when="departure" aria-pressed="false">Abfahrt</button>
+      <button type="button" data-when="arrival" aria-pressed="false">Ankunft</button>
+    </div>
+    <input type="datetime-local" id="whenInput" class="when-input" style="display:none">
+  </div>
+
+  <div class="grid">
+    <div class="col" data-role="from">
+      <h2>VON · Startorte</h2>
+      <div class="slots" data-slots="from"></div>
+      <button class="add-slot" data-add="from" type="button">+ Weiterer Startort</button>
+      <div class="dest-actions">
+        <button class="dest-action-btn" type="button" id="saveStartsBtn" aria-label="Startorte speichern" title="Startorte speichern">💾</button>
+        <button class="dest-action-btn" type="button" id="loadStartsBtn" aria-label="Gespeicherte Startorte laden" title="Gespeicherte Startorte">📁</button>
+      </div>
+    </div>
+    <button class="swap-btn" type="button" id="swapBtn" aria-label="Start und Ziel tauschen" title="Tauschen">⇄</button>
+    <div class="col" data-role="to">
+      <h2>NACH · Ziele</h2>
+      <div class="slots" data-slots="to"></div>
+      <button class="add-slot" data-add="to" type="button">+ Weiteres Ziel</button>
+      <div class="dest-actions">
+        <button class="dest-action-btn" type="button" id="saveDestsBtn" aria-label="Ziele speichern" title="Ziele speichern">💾</button>
+        <button class="dest-action-btn" type="button" id="loadDestsBtn" aria-label="Gespeicherte Ziele laden" title="Gespeicherte Ziele">📁</button>
+      </div>
+    </div>
+  </div>
+
+  <button class="swap-btn-mobile" type="button" id="swapBtnMobile">
+    ⇄ Start und Ziel tauschen
+  </button>
+
+  <div class="reset-row">
+    <button class="reset-btn" type="button" data-target="from">↺ Start</button>
+    <button class="reset-btn" type="button" data-target="to">↺ Ziel</button>
+    <button class="reset-btn" type="button" data-target="all">↺ Alles</button>
+  </div>
+  <button class="search-btn" id="searchBtn" type="button">Verbindungen suchen</button>
+
+  <section id="resultsArea"></section>
+
+  <section class="netzplan-section">
+    <button class="netzplan-toggle" id="netzplanToggle" type="button" aria-expanded="false">
+      <span class="netzplan-icon">🗺️</span>
+      <span class="netzplan-title">Netzpläne</span>
+      <span class="netzplan-arrow">▾</span>
+    </button>
+    <div class="netzplan-body" id="netzplanBody" hidden>
+      <p class="netzplan-intro">
+        Offizielle PDF-Pläne der Verkehrsverbünde — werden direkt von vbb.de, sbahn.berlin und bvg.de geladen.
+      </p>
+      <div class="netzplan-grid">
+        <a class="netzplan-card" target="_blank" rel="noopener noreferrer"
+           href="https://sbahn.berlin/fileadmin/user_upload/Liniennetz/S_U-Bahn-Liniennetz.pdf">
+          <span class="netzplan-card-tag" data-c="rail">S+U</span>
+          <span class="netzplan-card-name">S- & U-Bahn-Liniennetz</span>
+          <span class="netzplan-card-meta">Berlin ABC · S-Bahn Berlin / VBB</span>
+        </a>
+        <a class="netzplan-card" target="_blank" rel="noopener noreferrer"
+           href="https://www.bvg.de/dam/jcr:3f8025f2-285b-4fa0-8cef-72def24c6c21/S+U-Bahn_12_2025-Internetversion-BVG.pdf">
+          <span class="netzplan-card-tag" data-c="rail">S+U</span>
+          <span class="netzplan-card-name">S- & U-Bahn-Liniennetz</span>
+          <span class="netzplan-card-meta">Berlin AB · BVG-Variante</span>
+        </a>
+        <a class="netzplan-card" target="_blank" rel="noopener noreferrer"
+           href="https://www.bvg.de/dam/jcr:d45105f2-6752-4ec5-b882-8936572053c3/TramMetro_12_2025-Internetversion.pdf">
+          <span class="netzplan-card-tag" data-c="tram">TRAM</span>
+          <span class="netzplan-card-name">Straßenbahnnetz</span>
+          <span class="netzplan-card-meta">Alle Tram- & Metrotram-Linien · BVG</span>
+        </a>
+        <a class="netzplan-card" target="_blank" rel="noopener noreferrer"
+           href="https://sbahn.berlin/fileadmin/user_upload/Liniennetz/Busliniennetz.pdf">
+          <span class="netzplan-card-tag" data-c="bus">BUS</span>
+          <span class="netzplan-card-name">Busliniennetz</span>
+          <span class="netzplan-card-meta">Berlin · VBB</span>
+        </a>
+        <a class="netzplan-card" target="_blank" rel="noopener noreferrer"
+           href="https://sbahn.berlin/fileadmin/user_upload/Liniennetz/Regionalverkehr.pdf">
+          <span class="netzplan-card-tag" data-c="regional">REGIO</span>
+          <span class="netzplan-card-name">Regionalverkehr</span>
+          <span class="netzplan-card-meta">Berlin & Brandenburg · inkl. PlusBus</span>
+        </a>
+        <a class="netzplan-card" target="_blank" rel="noopener noreferrer"
+           href="https://sbahn.berlin/fileadmin/user_upload/Liniennetz/Nachtnetz.pdf">
+          <span class="netzplan-card-tag" data-c="night">NACHT</span>
+          <span class="netzplan-card-name">Nachtnetz</span>
+          <span class="netzplan-card-meta">Tram-, Bus- & U-Bahn-Nachtlinien</span>
+        </a>
+        <a class="netzplan-card" target="_blank" rel="noopener noreferrer"
+           href="https://www.bvg.de/dam/jcr:b40725a3-1da0-4ca7-ad1f-a214eb2d7ffe/Nachtnetz_Legende_A3_250409-highres.pdf">
+          <span class="netzplan-card-tag" data-c="night">NACHT</span>
+          <span class="netzplan-card-name">Nachtnetz · Legende A3</span>
+          <span class="netzplan-card-meta">BVG-Variante · hochauflösend</span>
+        </a>
+        <a class="netzplan-card" target="_blank" rel="noopener noreferrer"
+           href="https://www.bvg.de/en/connections/network-maps-and-routes">
+          <span class="netzplan-card-tag" data-c="link">↗</span>
+          <span class="netzplan-card-name">Alle BVG-Pläne</span>
+          <span class="netzplan-card-meta">U-Bahn, Bus, Tram, Fähre — Übersicht</span>
+        </a>
+        <a class="netzplan-card" target="_blank" rel="noopener noreferrer"
+           href="https://www.vbb.de/unterwegs-im-vbb/liniennetze/">
+          <span class="netzplan-card-tag" data-c="link">↗</span>
+          <span class="netzplan-card-name">Alle VBB-Pläne</span>
+          <span class="netzplan-card-meta">Brandenburg, PlusBus, regionale Karten</span>
+        </a>
+        <a class="netzplan-card" target="_blank" rel="noopener noreferrer"
+           href="https://sbahn.berlin/en/route-map/">
+          <span class="netzplan-card-tag" data-c="link">⊕</span>
+          <span class="netzplan-card-name">Interaktive S-Bahn-Karte</span>
+          <span class="netzplan-card-meta">Echtzeit-Karte · sbahn.berlin</span>
+        </a>
+      </div>
+    </div>
+  </section>
+</main>
+<footer>
+  Daten: <a href="https://v6.vbb.transport.rest" target="_blank" rel="noopener">v6.vbb.transport.rest</a> (HAFAS · VBB) · kein offizielles VBB-Produkt · 100 req/min
+</footer>
+
+<script>
+"use strict";
+
+const API = "https://v6.vbb.transport.rest";
+const MAX_SLOTS = 3;
+
+// ---------- State ----------
+const state = {
+  from: [emptySlot()],
+  to:   [emptySlot()],
+  whenMode: "now",     // "now" | "departure" | "arrival"
+  whenISO: null,       // null = now
+  sortBy: "arrival",   // "arrival" | "duration"
+  results: null,
+  loading: false,
+  error: null,
+};
+
+function emptySlot() {
+  return { q: "", picked: null, suggestions: [], showSugg: false, loading: false, error: null, nearbySource: null };
+}
+
+// ---------- Theme ----------
+const themeBtn = document.getElementById("themeBtn");
+// One-time migration: when default flipped to light, reset existing pref once.
+if (!localStorage.getItem("vbb-light-default-applied")) {
+  localStorage.setItem("vbb-theme", "light");
+  localStorage.setItem("vbb-light-default-applied", "1");
+}
+const savedTheme = localStorage.getItem("vbb-theme") || "light";
+applyTheme(savedTheme);
+themeBtn.addEventListener("click", () => {
+  const next = document.body.dataset.theme === "dark" ? "light" : "dark";
+  applyTheme(next);
+  localStorage.setItem("vbb-theme", next);
+});
+function applyTheme(t) {
+  document.body.dataset.theme = t;
+  document.body.classList.remove("theme-dark", "theme-light");
+  document.body.classList.add(t === "dark" ? "theme-dark" : "theme-light");
+  themeBtn.textContent = t === "dark" ? "DARK" : "LIGHT";
+  document.querySelector('meta[name="theme-color"]').content = t === "dark" ? "#1a1a1a" : "#ebe8e2";
+}
+
+// ---------- file:// warning ----------
+if (location.protocol === "file:") {
+  document.getElementById("protocolWarn").innerHTML = `
+    <div class="file-warning">
+      <b>Hinweis · file://-Origin</b><br>
+      Diese Seite läuft direkt aus dem Dateisystem. iOS Safari blockiert dann
+      Netzwerk-Anfragen an die VBB-API (<code>fetch: Load failed</code>).
+      Bitte über einen Webserver öffnen — z.B.
+      <code>python3 -m http.server</code> oder GitHub Pages / Netlify.
+    </div>`;
+}
+
+// ---------- Persisted last search ----------
+try {
+  const saved = JSON.parse(localStorage.getItem("vbb-last") || "null");
+  if (saved && Array.isArray(saved.from) && Array.isArray(saved.to)) {
+    state.from = saved.from.map(s => ({ ...emptySlot(), q: s.q || "", picked: s.picked || null }));
+    state.to   = saved.to.map(s => ({ ...emptySlot(), q: s.q || "", picked: s.picked || null }));
+    if (!state.from.length) state.from = [emptySlot()];
+    if (!state.to.length) state.to = [emptySlot()];
+    state.whenMode = saved.whenMode || "now";
+    state.sortBy = saved.sortBy || "arrival";
+  }
+} catch {}
+
+function persist() {
+  const dump = {
+    from: state.from.map(s => ({ q: s.q, picked: s.picked })),
+    to:   state.to.map(s => ({ q: s.q, picked: s.picked })),
+    whenMode: state.whenMode,
+    sortBy: state.sortBy,
+  };
+  localStorage.setItem("vbb-last", JSON.stringify(dump));
+}
+
+// ---------- When toggle ----------
+const whenInput = document.getElementById("whenInput");
+document.querySelectorAll(".when-toggle button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const mode = btn.dataset.when;
+    state.whenMode = mode;
+    document.querySelectorAll(".when-toggle button").forEach(b => {
+      b.setAttribute("aria-pressed", b.dataset.when === mode ? "true" : "false");
+    });
+    if (mode === "now") {
+      whenInput.style.display = "none";
+      state.whenISO = null;
+    } else {
+      whenInput.style.display = "";
+      // Default: now + 5 min, or current value
+      if (!whenInput.value) {
+        const d = new Date(Date.now() + 5 * 60000);
+        whenInput.value = toLocalInput(d);
+        state.whenISO = d.toISOString();
+      }
+    }
+    persist();
+  });
+});
+whenInput.addEventListener("change", () => {
+  if (whenInput.value) state.whenISO = new Date(whenInput.value).toISOString();
+});
+
+function toLocalInput(d) {
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// ---------- Slot rendering ----------
+function renderSlots() {
+  for (const role of ["from", "to"]) {
+    const container = document.querySelector(`[data-slots="${role}"]`);
+    container.innerHTML = "";
+    state[role].forEach((slot, idx) => {
+      container.appendChild(buildSlot(role, idx, slot));
+    });
+    const addBtn = document.querySelector(`[data-add="${role}"]`);
+    addBtn.disabled = state[role].length >= MAX_SLOTS;
+  }
+}
+
+function buildSlot(role, idx, slot) {
+  const wrap = document.createElement("div");
+  const isNonStop = slot.picked && !isStopType(slot.picked);
+  // Determine if we can offer "Near slot 1" and "ab №1" maps button
+  const slot1 = state[role][0];
+  const slot1HasCoords = idx > 0 && slot1 && slot1.picked && getCoords(slot1.picked);
+  const slot1Name = slot1HasCoords ? formatLocName(slot1.picked) : "";
+  // ab-№1 button: only show if THIS slot is picked AND we're not slot 1 AND slot 1 has coords
+  const showFrom1Maps = slot.picked && idx > 0 && slot1HasCoords;
+  wrap.className = "slot"
+    + (slot.picked ? " picked" : "")
+    + (isNonStop ? " has-non-stop" : "")
+    + (showFrom1Maps ? " show-from1-maps" : "");
+
+  wrap.innerHTML = `
+    <div class="slot-input-wrap">
+      <span class="slot-num">${idx + 1}</span>
+      <input
+        type="text"
+        autocomplete="off"
+        spellcheck="false"
+        placeholder="${role === "from" ? "Haltestelle, Adresse oder Ort" : "Wohin?"}"
+        value="${escapeAttr(slot.picked ? formatLocName(slot.picked) : slot.q)}">
+      <button class="slot-clear" type="button" aria-label="Zurücksetzen">×</button>
+    </div>
+    <div class="slot-tools">
+      <button class="slot-tool" type="button" data-action="gps" aria-label="Mein Standort">
+        <span class="ico"></span> GPS
+      </button>
+      ${slot1HasCoords ? `
+      <button class="slot-tool" type="button" data-action="near"
+        title="Haltestellen nahe №1 (${escapeAttr(slot1Name)})">
+        <span class="ico"></span> Nähe №1
+      </button>` : ""}
+      <button class="slot-tool" type="button" data-action="maps-gps"
+        aria-label="Laufstrecke vom GPS-Standort hierher in Google Maps"
+        title="Laufstrecke vom aktuellen Standort hierher">
+        🗺️ ab GPS
+      </button>
+      <button class="slot-tool" type="button" data-action="maps-from1"
+        aria-label="Laufstrecke von Slot №1 hierher in Google Maps"
+        title="Laufstrecke von Slot №1 hierher">
+        🗺️ ab №1
+      </button>
+    </div>
+  `;
+  const input = wrap.querySelector("input");
+  const clearBtn = wrap.querySelector(".slot-clear");
+
+  input.addEventListener("input", () => {
+    slot.q = input.value;
+    slot.picked = null;
+    slot.error = null;
+    wrap.classList.remove("picked");
+    wrap.classList.remove("has-non-stop");
+    wrap.classList.remove("show-from1-maps");
+    debouncedSearch(role, idx, input.value, wrap);
+  });
+  input.addEventListener("focus", () => {
+    if (slot.suggestions.length || slot.error) showSuggestions(role, idx, slot, wrap);
+  });
+  input.addEventListener("blur", () => {
+    setTimeout(() => hideSuggestions(wrap), 180);
+  });
+  input.addEventListener("keydown", (e) => {
+    const sugBox = wrap._suggestionsBox || wrap.querySelector(".suggestions");
+    if (!sugBox) return;
+    const items = sugBox.querySelectorAll(".suggestion");
+    let sel = sugBox.querySelector('[aria-selected="true"]');
+    let i = sel ? Array.from(items).indexOf(sel) : -1;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      i = Math.min(items.length - 1, i + 1);
+      items.forEach(it => it.setAttribute("aria-selected", "false"));
+      if (items[i]) items[i].setAttribute("aria-selected", "true");
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      i = Math.max(0, i - 1);
+      items.forEach(it => it.setAttribute("aria-selected", "false"));
+      if (items[i]) items[i].setAttribute("aria-selected", "true");
+    } else if (e.key === "Enter") {
+      if (sel) {
+        e.preventDefault();
+        sel.click();
+      }
+    } else if (e.key === "Escape") {
+      hideSuggestions(wrap);
+    }
+  });
+  clearBtn.addEventListener("click", () => {
+    slot.q = "";
+    slot.picked = null;
+    slot.suggestions = [];
+    slot.error = null;
+    input.value = "";
+    wrap.classList.remove("picked");
+    wrap.classList.remove("has-non-stop");
+    wrap.classList.remove("show-from1-maps");
+    hideSuggestions(wrap);
+    input.focus();
+    persist();
+    // Re-render tools row in this column (slot 1 might have changed picked status)
+    if (idx === 0) renderSlots();
+  });
+
+  // Tool buttons
+  wrap.querySelectorAll(".slot-tool").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      const action = btn.dataset.action;
+      btn.dataset.loading = "true";
+      try {
+        if (action === "gps") {
+          const slot = state[role][idx];
+          // Show live accuracy progress while watchPosition refines
+          slot.loading = true;
+          slot.walkLoading = false;
+          slot.suggestions = [];
+          slot.error = null;
+          slot.nearbySource = "Standort wird ermittelt…";
+          showSuggestions(role, idx, slot, wrap);
+          const pos = await getBestPosition({
+            goodEnough: 30,
+            acceptable: 100,
+            timeout: 15000,
+            onUpdate: (p) => {
+              slot.nearbySource = `Standort … ±${Math.round(p.acc)} m`;
+              showSuggestions(role, idx, slot, wrap);
+            },
+          });
+          const accLabel = pos.acc ? `Mein Standort · ±${Math.round(pos.acc)} m` : "Mein Standort";
+          setCachedGps(pos);
+          await loadNearby(role, idx, wrap, pos.lat, pos.lng, accLabel, {
+            includeOriginPick: true,
+            originAccuracy: pos.acc,
+          });
+        } else if (action === "near") {
+          const ref = state[role][0].picked;
+          const c = getCoords(ref);
+          if (!c) throw new Error("Slot №1 hat keine Koordinaten");
+          await loadNearby(role, idx, wrap, c.lat, c.lng, formatLocName(ref));
+        } else if (action === "maps-gps") {
+          // GPS-to-slot route. Sync open required.
+          openMapsFromGps(role, idx);
+        } else if (action === "maps-from1") {
+          openMapsFromSlot1(role, idx);
+        }
+      } catch (err) {
+        const slot = state[role][idx];
+        slot.error = friendlyError(err);
+        slot.suggestions = [];
+        showSuggestions(role, idx, slot, wrap);
+      } finally {
+        btn.dataset.loading = "false";
+      }
+    });
+  });
+
+  if (slot.showSugg) showSuggestions(role, idx, slot, wrap);
+  return wrap;
+}
+
+function getCoords(loc) {
+  if (!loc) return null;
+  const lat = loc.location?.latitude ?? loc.latitude;
+  const lng = loc.location?.longitude ?? loc.longitude;
+  if (typeof lat === "number" && typeof lng === "number") return { lat, lng };
+  return null;
+}
+
+function isStopType(loc) {
+  if (!loc) return false;
+  return loc.type === "stop" || loc.type === "station";
+}
+
+// Continuous-refinement geolocation: iOS combines GPS+Wi-Fi+Cell automatically;
+// watchPosition lets multiple updates flow in, so we can take the best one.
+function getBestPosition({ goodEnough = 30, acceptable = 100, timeout = 15000, onUpdate } = {}) {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error("Geolocation in diesem Browser nicht verfügbar"));
+      return;
+    }
+    let best = null;
+    let watchId = null;
+    let hardTimeout = null;
+    let acceptableTimer = null;
+    let settled = false;
+
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+      if (hardTimeout) clearTimeout(hardTimeout);
+      if (acceptableTimer) clearTimeout(acceptableTimer);
+      if (best) resolve(best);
+      else reject(new Error("Standort konnte nicht ermittelt werden — bitte nochmal versuchen"));
+    };
+
+    watchId = navigator.geolocation.watchPosition(
+      (p) => {
+        if (settled) return;
+        const pos = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy };
+        if (!best || pos.acc < best.acc) best = pos;
+        if (onUpdate) onUpdate(best);
+        if (best.acc <= goodEnough) {
+          finish();
+        } else if (best.acc <= acceptable && !acceptableTimer) {
+          // Acceptable fix — wait briefly for further refinement, then accept
+          acceptableTimer = setTimeout(finish, 4000);
+        }
+      },
+      (err) => {
+        if (settled) return;
+        if (best) { finish(); return; } // we have something usable
+        settled = true;
+        if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+        if (hardTimeout) clearTimeout(hardTimeout);
+        if (acceptableTimer) clearTimeout(acceptableTimer);
+        const msg = err.code === 1
+            ? 'Standort verweigert. iOS-Einstellungen → Datenschutz → Ortungsdienste → Safari-Websites: „Beim Verwenden" und „Genauer Standort" aktivieren.'
+          : err.code === 2 ? "Standort nicht ermittelbar (kein GPS/WLAN-Signal?)"
+          : err.code === 3 ? "Standort-Anfrage Timeout — bitte nochmal versuchen"
+          :                  "Standortfehler";
+        reject(new Error(msg));
+      },
+      { timeout: timeout, maximumAge: 0, enableHighAccuracy: true }
+    );
+
+    hardTimeout = setTimeout(finish, timeout);
+  });
+}
+
+async function fetchNearby(lat, lng) {
+  const params = new URLSearchParams({
+    latitude: String(lat),
+    longitude: String(lng),
+    results: "10",
+    distance: "2500",
+    poi: "false",
+    stops: "true",
+    linesOfStops: "true",
+  });
+  const res = await fetch(`${API}/locations/nearby?${params}`);
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
+}
+
+// Walking-distance via OSRM foot router (community OSM instance, free, CORS-ok)
+const OSRM_FOOT = "https://routing.openstreetmap.de/routed-foot/route/v1/foot";
+async function fetchWalkRoute(fromLat, fromLng, toLat, toLng) {
+  const url = `${OSRM_FOOT}/${fromLng},${fromLat};${toLng},${toLat}?overview=false&alternatives=false&steps=false`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("OSRM " + res.status);
+  const data = await res.json();
+  if (data.code !== "Ok" || !data.routes?.[0]) throw new Error("OSRM no route");
+  return { distance: data.routes[0].distance, duration: data.routes[0].duration };
+}
+
+let nearbyToken = 0; // race-condition guard
+
+async function loadNearby(role, idx, wrap, lat, lng, sourceLabel, options = {}) {
+  const slot = state[role][idx];
+  const myToken = ++nearbyToken;
+  slot.loading = true;
+  slot.walkLoading = false;
+  slot.error = null;
+  slot.nearbySource = sourceLabel;
+  slot.suggestions = [];
+  showSuggestions(role, idx, slot, wrap);
+  try {
+    const data = await fetchNearby(lat, lng);
+    if (myToken !== nearbyToken) return;
+    const enriched = data.map(s => ({
+      ...s, airDistance: s.distance,
+      walkDistance: null, walkDuration: null, walkFailed: false,
+    }));
+
+    // For GPS button: inject a "use this exact location" entry that, when picked,
+    // becomes a non-stop start/destination — journey then begins with a walking leg.
+    if (options.includeOriginPick) {
+      const acc = options.originAccuracy;
+      const accStr = (typeof acc === "number") ? ` · ±${Math.round(acc)} m` : "";
+      enriched.unshift({
+        type: "location",
+        latitude: lat,
+        longitude: lng,
+        name: "Mein Standort",
+        address: `Mein Standort (GPS${accStr})`,
+        airDistance: 0,
+        walkDistance: 0,
+        walkDuration: 0,
+        walkFailed: false,
+        __useGps: true,
+      });
+    }
+
+    // Now compute walk distances in parallel; keep showing the loader.
+    slot.walkLoading = true;
+    showSuggestions(role, idx, slot, wrap);
+
+    const walkPromises = enriched.map(async (stop) => {
+      if (stop.__useGps) return; // self-routing makes no sense
+      const c = getCoords(stop);
+      if (!c) { stop.walkFailed = true; return; }
+      try {
+        const r = await fetchWalkRoute(lat, lng, c.lat, c.lng);
+        stop.walkDistance = r.distance;
+        stop.walkDuration = r.duration;
+      } catch {
+        stop.walkFailed = true;
+      }
+    });
+    // Wait for all walking lookups, but cap at 5s — partial is better than infinite.
+    await Promise.race([
+      Promise.allSettled(walkPromises),
+      new Promise(r => setTimeout(r, 5000)),
+    ]);
+    if (myToken !== nearbyToken) return;
+
+    // Sort: __useGps entry always first; others by walking distance with
+    // air-distance fallback (×1.3 penalty so they sink below comparable stops).
+    enriched.sort((a, b) => {
+      if (a.__useGps) return -1;
+      if (b.__useGps) return 1;
+      const da = a.walkDistance ?? (a.airDistance ?? Infinity) * 1.3;
+      const db = b.walkDistance ?? (b.airDistance ?? Infinity) * 1.3;
+      return da - db;
+    });
+
+    slot.suggestions = enriched;
+    slot.loading = false;
+    slot.walkLoading = false;
+    showSuggestions(role, idx, slot, wrap);
+  } catch (err) {
+    if (myToken !== nearbyToken) return;
+    slot.loading = false;
+    slot.walkLoading = false;
+    slot.suggestions = [];
+    slot.error = friendlyError(err);
+    showSuggestions(role, idx, slot, wrap);
+  }
+}
+
+function friendlyError(err) {
+  const m = err && err.message ? String(err.message) : String(err);
+  if (/Load failed|Failed to fetch|NetworkError/i.test(m)) {
+    return "Verbindung zur API fehlgeschlagen";
+  }
+  return m;
+}
+
+function escapeAttr(s) { return String(s ?? "").replace(/"/g, "&quot;"); }
+function escapeHtml(s) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
+// ---------- Autocomplete ----------
+const debounceTimers = new Map();
+const locCache = new Map(); // lowercase query -> result array
+const inflightCtrls = new Map(); // key -> AbortController
+
+function debouncedSearch(role, idx, q, wrap) {
+  const key = `${role}:${idx}`;
+  clearTimeout(debounceTimers.get(key));
+  const slot = state[role][idx];
+  slot.nearbySource = null;
+  slot.error = null;
+  const trimmed = q.trim();
+  if (trimmed.length < 2) {
+    slot.suggestions = [];
+    slot.loading = false;
+    hideSuggestions(wrap);
+    return;
+  }
+
+  // Instant cache hit — no API call, no flicker.
+  const cached = locCache.get(trimmed.toLowerCase());
+  if (cached) {
+    slot.suggestions = cached;
+    slot.loading = false;
+    slot.error = null;
+    showSuggestions(role, idx, slot, wrap);
+    return;
+  }
+
+  // Keep showing previous suggestions while fetching — only show "Suche…" on first query.
+  if (!slot.suggestions.length) {
+    slot.loading = true;
+    showSuggestions(role, idx, slot, wrap);
+  }
+
+  debounceTimers.set(key, setTimeout(async () => {
+    // Cancel any in-flight request for this slot
+    const prev = inflightCtrls.get(key);
+    if (prev) prev.abort();
+    const ctrl = new AbortController();
+    inflightCtrls.set(key, ctrl);
+    try {
+      const url = `${API}/locations?query=${encodeURIComponent(trimmed)}&results=8&poi=true&addresses=true&fuzzy=true&linesOfStops=true`;
+      const res = await fetch(url, { signal: ctrl.signal });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+      const result = Array.isArray(data) ? data.slice(0, 8) : [];
+      locCache.set(trimmed.toLowerCase(), result);
+      // Cap cache size to avoid unbounded growth
+      if (locCache.size > 120) {
+        locCache.delete(locCache.keys().next().value);
+      }
+      // Only apply if this controller is still the current one
+      if (inflightCtrls.get(key) !== ctrl) return;
+      slot.suggestions = result;
+      slot.loading = false;
+      slot.error = null;
+      showSuggestions(role, idx, slot, wrap);
+    } catch (err) {
+      if (err && err.name === "AbortError") return; // newer request superseded this one
+      slot.loading = false;
+      slot.error = friendlyError(err);
+      console.warn("locations error", err);
+      showSuggestions(role, idx, slot, wrap);
+    }
+  }, 150));
+}
+
+function showSuggestions(role, idx, slot, wrap) {
+  hideSuggestions(wrap);
+  const box = document.createElement("div");
+  box.className = "suggestions";
+  let html = "";
+  if (slot.error) {
+    const isNet = /API fehlgeschlagen/.test(slot.error);
+    html += `<div class="sug-error">⚠ ${escapeHtml(slot.error)}${isNet ? `
+      <small>Tipp: App über http(s) hosten — file://-Origin blockiert fetch</small>` : ""}</div>`;
+  }
+  if (slot.loading) {
+    let label;
+    if (slot.walkLoading) {
+      label = `Berechne Laufdistanzen${slot.nearbySource ? ` ab „${escapeHtml(slot.nearbySource)}"` : ""}…`;
+    } else if (slot.nearbySource) {
+      label = escapeHtml(slot.nearbySource);
+    } else {
+      label = "Suche…";
+    }
+    html += `<div class="sug-loading">${label}</div>`;
+  } else if (slot.nearbySource && slot.suggestions.length && !slot.error) {
+    html += `<div class="sug-header">Haltestellen nahe „${escapeHtml(slot.nearbySource)}" · sortiert nach Laufdistanz</div>`;
+  }
+  if (!slot.loading && !slot.error && !slot.suggestions.length) {
+    html += `<div class="sug-empty">Keine Treffer</div>`;
+  }
+  if (slot.suggestions.length) {
+    html += slot.suggestions.map((s, i) => {
+      const name = formatLocName(s);
+      const dist = formatDistance(s);
+      const lines = renderSugLines(s);
+      if (s.__useGps) {
+        return `<div class="suggestion suggestion-self" data-i="${i}" ${i === 0 ? 'aria-selected="true"' : ''}>
+          <div class="suggestion-row1">
+            <span class="sug-type" data-t="self">📍 GPS</span>
+            <span class="sug-name">Diesen Standort verwenden</span>
+            ${dist ? `<span class="sug-distance">${dist}</span>` : ""}
+          </div>
+        </div>`;
+      }
+      const t = sugType(s);
+      return `<div class="suggestion" data-i="${i}" ${i === 0 ? 'aria-selected="true"' : ''}>
+        <div class="suggestion-row1">
+          <span class="sug-type" data-t="${t}">${t}</span>
+          <span class="sug-name">${escapeHtml(name)}</span>
+          ${dist ? `<span class="sug-distance">${dist}</span>` : ""}
+        </div>
+        ${lines}
+      </div>`;
+    }).join("");
+  }
+  box.innerHTML = html;
+  // Append to body and position via fixed coords — escapes all stacking contexts.
+  document.body.appendChild(box);
+  positionSuggestionBox(wrap, box);
+  // Reposition on scroll/resize while open
+  box._reposHandler = () => positionSuggestionBox(wrap, box);
+  window.addEventListener("scroll", box._reposHandler, true);
+  window.addEventListener("resize", box._reposHandler);
+  // Track the box on the wrap for hideSuggestions to find it
+  wrap._suggestionsBox = box;
+  box.querySelectorAll(".suggestion").forEach((el, i) => {
+    el.addEventListener("click", () => pickSuggestion(role, idx, slot.suggestions[i], wrap));
+    el.addEventListener("mouseenter", () => {
+      box.querySelectorAll(".suggestion").forEach(e => e.setAttribute("aria-selected", "false"));
+      el.setAttribute("aria-selected", "true");
+    });
+  });
+  slot.showSugg = true;
+}
+
+function positionSuggestionBox(wrap, box) {
+  const inputWrap = wrap.querySelector(".slot-input-wrap");
+  if (!inputWrap) return;
+  const r = inputWrap.getBoundingClientRect();
+  box.style.left = r.left + "px";
+  box.style.width = r.width + "px";
+  // Open downwards by default; flip up if not enough space below
+  const spaceBelow = window.innerHeight - r.bottom;
+  const spaceAbove = r.top;
+  if (spaceBelow < 200 && spaceAbove > spaceBelow) {
+    box.style.top = "auto";
+    box.style.bottom = (window.innerHeight - r.top + 4) + "px";
+    box.style.maxHeight = Math.max(180, spaceAbove - 16) + "px";
+  } else {
+    box.style.bottom = "auto";
+    box.style.top = (r.bottom + 4) + "px";
+    box.style.maxHeight = Math.max(180, spaceBelow - 16) + "px";
+  }
+}
+
+// Compact line-badge row for a stop suggestion. Shows up to 5 distinct lines,
+// prioritizing rail products (S/U/Tram) over bus.
+const PRODUCT_PRIORITY = {
+  suburban: 1, subway: 2, tram: 3,
+  regional: 4, regionalExp: 4, nationalExpress: 5, national: 5, express: 5,
+  ferry: 6, bus: 7, taxi: 8,
+};
+function renderSugLines(s) {
+  const lines = Array.isArray(s.lines) ? s.lines : [];
+  if (!lines.length) return "";
+  // Dedupe by name; sort by product priority then name.
+  const seen = new Set();
+  const unique = [];
+  for (const l of lines) {
+    if (!l || !l.name || seen.has(l.name)) continue;
+    seen.add(l.name);
+    unique.push(l);
+  }
+  unique.sort((a, b) => {
+    const pa = PRODUCT_PRIORITY[a.product] || 99;
+    const pb = PRODUCT_PRIORITY[b.product] || 99;
+    if (pa !== pb) return pa - pb;
+    return (a.name || "").localeCompare(b.name || "", "de", { numeric: true });
+  });
+  const MAX = 5;
+  const shown = unique.slice(0, MAX);
+  const rest = unique.length - shown.length;
+  const badges = shown.map(l => {
+    const product = l.product || "regional";
+    return `<span class="sug-line p-${escapeAttr(product)}">${escapeHtml(l.name)}</span>`;
+  }).join("");
+  const more = rest > 0 ? `<span class="sug-line-more">+${rest}</span>` : "";
+  return `<span class="sug-lines">${badges}${more}</span>`;
+}
+
+function formatDistance(s) {
+  if (s.__useGps) return "direkt";
+  // Prefer walking distance from OSRM
+  if (typeof s.walkDistance === "number") {
+    const d = s.walkDistance;
+    const dStr = d < 1000 ? Math.round(d) + " m" : (d / 1000).toFixed(1).replace(".", ",") + " km";
+    const min = s.walkDuration ? Math.max(1, Math.round(s.walkDuration / 60)) : null;
+    return `🚶 ${dStr}${min ? " · " + min + " min" : ""}`;
+  }
+  // Fallback: air-line distance with explicit label
+  const d = s.airDistance ?? s.distance;
+  if (typeof d !== "number") return "";
+  const dStr = d < 1000 ? d + " m" : (d / 1000).toFixed(1).replace(".", ",") + " km";
+  if (s.walkFailed) return `~${dStr} Luftl.`;
+  return `~${dStr} Luftl. …`;  // ellipsis = walking distance still loading
+}
+
+// Cached GPS position for maps buttons. Re-used within 2 minutes so the user
+// doesn't have to wait for a fresh fix on every map click.
+const GPS_CACHE_KEY = "vbb-last-gps";
+function getCachedGps() {
+  try {
+    const raw = localStorage.getItem(GPS_CACHE_KEY);
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    if (!obj || !obj.ts || Date.now() - obj.ts > 2 * 60 * 1000) return null;
+    return obj;
+  } catch { return null; }
+}
+function setCachedGps(pos) {
+  try {
+    localStorage.setItem(GPS_CACHE_KEY, JSON.stringify({ ...pos, ts: Date.now() }));
+  } catch {}
+}
+
+function buildMapsUrl(originLat, originLng, destLat, destLng, destName) {
+  return "https://www.google.com/maps/dir/?api=1"
+    + "&origin=" + encodeURIComponent(originLat + "," + originLng)
+    + "&destination=" + encodeURIComponent(destLat + "," + destLng)
+    + "&destination_place=" + encodeURIComponent(destName || "Ziel")
+    + "&travelmode=walking";
+}
+
+// Walking route from current GPS to this slot's pick. If slot is a stop, the
+// destination is that stop itself. If slot is an address/POI/GPS-pick, route
+// to the slot's coordinates directly (the user is the routing target).
+// Must complete synchronously when GPS cache is fresh; otherwise the click
+// triggers a fresh fix and the button is re-pressable once it lands.
+function openMapsFromGps(role, idx) {
+  const slot = state[role][idx];
+  if (!slot.picked) return;
+  const dest = getCoords(slot.picked);
+  if (!dest) {
+    alert("Pick hat keine Koordinaten — kann Karte nicht öffnen.");
+    return;
+  }
+  const cached = getCachedGps();
+  if (cached) {
+    const url = buildMapsUrl(cached.lat, cached.lng, dest.lat, dest.lng, formatLocName(slot.picked));
+    window.open(url, "_blank", "noopener,noreferrer");
+    return;
+  }
+  // No fresh GPS — request one. The promise is async, so this click cannot
+  // open Maps directly. We request a fix and tell the user to tap again
+  // once it's ready (or open the destination in Maps as a fallback).
+  alert("Standort wird ermittelt — bitte den Karten-Knopf gleich nochmal drücken.");
+  getBestPosition({ goodEnough: 50, acceptable: 150, timeout: 15000 })
+    .then(pos => { setCachedGps(pos); })
+    .catch(err => { alert("GPS-Fehler: " + (err.message || err)); });
+}
+
+// Walking route from slot №1 (in same column) to this slot's pick.
+function openMapsFromSlot1(role, idx) {
+  const slot = state[role][idx];
+  if (!slot.picked) return;
+  const slot1 = state[role][0];
+  if (!slot1 || !slot1.picked) {
+    alert("Slot №1 ist nicht ausgewählt.");
+    return;
+  }
+  const origin = getCoords(slot1.picked);
+  const dest = getCoords(slot.picked);
+  if (!origin || !dest) {
+    alert("Koordinaten fehlen — kann Karte nicht öffnen.");
+    return;
+  }
+  const url = buildMapsUrl(origin.lat, origin.lng, dest.lat, dest.lng, formatLocName(slot.picked));
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+function hideSuggestions(wrap) {
+  const box = wrap._suggestionsBox || wrap.querySelector(".suggestions");
+  if (box) {
+    if (box._reposHandler) {
+      window.removeEventListener("scroll", box._reposHandler, true);
+      window.removeEventListener("resize", box._reposHandler);
+    }
+    box.remove();
+  }
+  wrap._suggestionsBox = null;
+}
+function sugType(s) {
+  if (s.type === "stop" || s.type === "station") return "stop";
+  if (s.poi) return "poi";
+  if (s.address) return "address";
+  if (s.type === "location") return s.address ? "address" : (s.poi ? "poi" : "stop");
+  return s.type || "stop";
+}
+function formatLocName(s) {
+  if (s.name) return s.name;
+  if (s.address) return s.address;
+  return "(unbenannt)";
+}
+function pickSuggestion(role, idx, item, wrap) {
+  const slot = state[role][idx];
+  slot.picked = item;
+  slot.q = formatLocName(item);
+  slot.suggestions = [];
+  slot.showSugg = false;
+  slot.error = null;
+  slot.nearbySource = null;
+  hideSuggestions(wrap);
+  wrap.classList.add("picked");
+  wrap.classList.toggle("has-non-stop", !isStopType(item));
+  wrap.querySelector("input").value = formatLocName(item);
+  persist();
+  // If slot 1 just got picked, re-render so slot 2/3 can show "Nähe №1" + "ab №1" maps
+  if (idx === 0 && state[role].length > 1) renderSlots();
+}
+
+// ---------- Add / remove slot ----------
+document.querySelectorAll("[data-add]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const role = btn.dataset.add;
+    if (state[role].length >= MAX_SLOTS) return;
+    state[role].push(emptySlot());
+    renderSlots();
+    persist();
+  });
+});
+
+// ---------- Sort + Search ----------
+document.getElementById("searchBtn").addEventListener("click", runSearch);
+
+document.querySelectorAll(".reset-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const target = btn.dataset.target;
+    if (target === "from" || target === "all") state.from = [emptySlot()];
+    if (target === "to"   || target === "all") state.to   = [emptySlot()];
+    if (target === "all") {
+      state.results = null;
+      state.error = null;
+    }
+    persist();
+    renderSlots();
+    if (target === "all") renderResults();
+  });
+});
+
+// ---------- Saved sets (start + destinations) ----------
+const SAVED_KEYS = {
+  from: "vbb-saved-starts",
+  to: "vbb-saved-destinations",
+};
+const ROLE_LABELS = {
+  from: { single: "Startort", plural: "Startorte", combination: "Start-Kombination" },
+  to:   { single: "Ziel",      plural: "Ziele",     combination: "Ziel-Kombination" },
+};
+
+function getSaved(role) {
+  try { return JSON.parse(localStorage.getItem(SAVED_KEYS[role]) || "[]"); }
+  catch { return []; }
+}
+function setSaved(role, arr) {
+  localStorage.setItem(SAVED_KEYS[role], JSON.stringify(arr));
+}
+
+function saveCurrent(role) {
+  const picks = state[role].filter(s => s.picked).map(s => s.picked);
+  const labels = ROLE_LABELS[role];
+  if (!picks.length) {
+    alert(`Bitte zuerst mindestens einen ${labels.single} auswählen.`);
+    return;
+  }
+  const defaultName = picks.map(p => formatLocName(p)).join(", ").slice(0, 40);
+  const name = prompt(`Name für diese ${labels.combination}:`, defaultName);
+  if (!name || !name.trim()) return;
+  const entry = { name: name.trim(), picks };
+  const arr = getSaved(role);
+  const existingIdx = arr.findIndex(e => e.name === entry.name);
+  if (existingIdx >= 0) arr[existingIdx] = entry;
+  else arr.unshift(entry);
+  if (arr.length > 30) arr.length = 30;
+  setSaved(role, arr);
+  hideSavedPopover();
+}
+
+function loadSaved(role, entry) {
+  const slots = entry.picks.slice(0, MAX_SLOTS).map(p => ({
+    ...emptySlot(),
+    picked: p,
+    q: formatLocName(p),
+  }));
+  state[role] = slots.length ? slots : [emptySlot()];
+  persist();
+  renderSlots();
+  hideSavedPopover();
+}
+
+function deleteSaved(role, name) {
+  if (!confirm(`„${name}" wirklich löschen?`)) return;
+  setSaved(role, getSaved(role).filter(e => e.name !== name));
+  showSavedPopover(role);
+}
+
+function showSavedPopover(role) {
+  hideSavedPopover();
+  const arr = getSaved(role);
+  const labels = ROLE_LABELS[role];
+  const popover = document.createElement("div");
+  popover.className = "saved-popover";
+  popover.id = "savedPopover";
+  popover.dataset.role = role;
+  if (!arr.length) {
+    popover.innerHTML = `<div class="saved-empty">Noch keine ${escapeHtml(labels.plural)} gespeichert.<br>Wähle ${escapeHtml(labels.plural)}, dann 💾.</div>`;
+  } else {
+    popover.innerHTML = arr.map((entry, i) => {
+      const preview = entry.picks.map(p => formatLocName(p)).join(" · ");
+      return `<div class="saved-entry" data-i="${i}">
+        <div class="saved-entry-text" data-action="load">
+          <div class="saved-entry-name">${escapeHtml(entry.name)}</div>
+          <div class="saved-entry-preview">${escapeHtml(preview)}</div>
+        </div>
+        <button class="saved-entry-delete" data-action="delete" type="button" aria-label="Löschen">×</button>
+      </div>`;
+    }).join("");
+  }
+  // Append to body and position via fixed coords — escapes all stacking contexts.
+  const destActions = document.querySelector(`.col[data-role="${role}"] .dest-actions`);
+  document.body.appendChild(popover);
+  positionSavedPopover(destActions, popover);
+  popover._reposHandler = () => positionSavedPopover(destActions, popover);
+  window.addEventListener("scroll", popover._reposHandler, true);
+  window.addEventListener("resize", popover._reposHandler);
+  popover._anchor = destActions;
+  popover.querySelectorAll(".saved-entry").forEach((el, i) => {
+    el.querySelector('[data-action="load"]').addEventListener("click", () => loadSaved(role, arr[i]));
+    el.querySelector('[data-action="delete"]').addEventListener("click", (e) => {
+      e.stopPropagation();
+      deleteSaved(role, arr[i].name);
+    });
+  });
+  setTimeout(() => document.addEventListener("click", outsideSavedClick), 50);
+}
+
+function positionSavedPopover(anchor, popover) {
+  if (!anchor) return;
+  const r = anchor.getBoundingClientRect();
+  popover.style.left = r.left + "px";
+  popover.style.width = r.width + "px";
+  const spaceBelow = window.innerHeight - r.bottom;
+  const spaceAbove = r.top;
+  // Saved popover prefers opening upwards (above the buttons) since the
+  // buttons sit at the bottom of the column — flip down only if more space below.
+  if (spaceAbove >= 200 || spaceAbove > spaceBelow) {
+    popover.style.top = "auto";
+    popover.style.bottom = (window.innerHeight - r.top + 4) + "px";
+    popover.style.maxHeight = Math.max(180, spaceAbove - 16) + "px";
+  } else {
+    popover.style.bottom = "auto";
+    popover.style.top = (r.bottom + 4) + "px";
+    popover.style.maxHeight = Math.max(180, spaceBelow - 16) + "px";
+  }
+}
+function hideSavedPopover() {
+  const p = document.getElementById("savedPopover");
+  if (p) {
+    if (p._reposHandler) {
+      window.removeEventListener("scroll", p._reposHandler, true);
+      window.removeEventListener("resize", p._reposHandler);
+    }
+    p.remove();
+  }
+  document.removeEventListener("click", outsideSavedClick);
+}
+function outsideSavedClick(e) {
+  const popover = document.getElementById("savedPopover");
+  // Click is "inside" if it's in the popover itself OR in any dest-actions
+  // (the save/load buttons that opened it).
+  const insidePopover = popover && popover.contains(e.target);
+  const insideActions = e.target.closest(".dest-actions");
+  if (popover && !insidePopover && !insideActions) {
+    hideSavedPopover();
+  }
+}
+
+document.getElementById("saveDestsBtn").addEventListener("click", () => saveCurrent("to"));
+document.getElementById("loadDestsBtn").addEventListener("click", (e) => {
+  e.stopPropagation();
+  const open = document.getElementById("savedPopover");
+  if (open && open.dataset.role === "to") hideSavedPopover();
+  else showSavedPopover("to");
+});
+document.getElementById("saveStartsBtn").addEventListener("click", () => saveCurrent("from"));
+document.getElementById("loadStartsBtn").addEventListener("click", (e) => {
+  e.stopPropagation();
+  const open = document.getElementById("savedPopover");
+  if (open && open.dataset.role === "from") hideSavedPopover();
+  else showSavedPopover("from");
+});
+
+function swapStartAndDest() {
+  const tmp = state.from;
+  state.from = state.to;
+  state.to = tmp;
+  // Also swap saved-suggestions, picks, etc. — already in the slot objects.
+  persist();
+  renderSlots();
+  // Re-prefetch maps URLs after swap, since slot identity changed.
+  [...state.from, ...state.to].forEach(s => {
+    if (s.picked && !isStopType(s.picked)) prefetchMapsUrl(s);
+  });
+}
+document.getElementById("swapBtn").addEventListener("click", swapStartAndDest);
+document.getElementById("swapBtnMobile").addEventListener("click", swapStartAndDest);
+
+// Netzplan section toggle
+const netzplanToggle = document.getElementById("netzplanToggle");
+const netzplanBody = document.getElementById("netzplanBody");
+netzplanToggle.addEventListener("click", () => {
+  const open = netzplanToggle.getAttribute("aria-expanded") === "true";
+  netzplanToggle.setAttribute("aria-expanded", String(!open));
+  netzplanBody.hidden = open;
+});
+
+async function runSearch() {
+  const fromList = state.from.filter(s => s.picked);
+  const toList = state.to.filter(s => s.picked);
+  if (!fromList.length || !toList.length) {
+    state.error = "Bitte mindestens einen Start und ein Ziel auswählen.";
+    state.results = null;
+    renderResults();
+    return;
+  }
+  state.error = null;
+  state.loading = true;
+  state.results = null;
+  renderResults();
+
+  // Time param
+  let timeParam = null;
+  if (state.whenMode !== "now" && state.whenISO) {
+    timeParam = { kind: state.whenMode, iso: state.whenISO };
+  }
+
+  const pairs = [];
+  for (const f of fromList) for (const t of toList) pairs.push({ from: f.picked, to: t.picked });
+
+  const results = await Promise.all(pairs.map(async (p) => {
+    try {
+      const j = await fetchJourney(p.from, p.to, timeParam);
+      return { from: p.from, to: p.to, journey: j, error: null };
+    } catch (e) {
+      return { from: p.from, to: p.to, journey: null, error: e.message || "Fehler" };
+    }
+  }));
+
+  state.results = results;
+  state.loading = false;
+  persist();
+  renderResults();
+}
+
+function locToParams(loc, prefix) {
+  const p = new URLSearchParams();
+  if (loc.type === "stop" || loc.type === "station") {
+    p.set(prefix, loc.id);
+    return p.toString();
+  }
+  // POI / address: always pass via prefix.* with lat/lon
+  const lat = loc.location?.latitude ?? loc.latitude;
+  const lng = loc.location?.longitude ?? loc.longitude;
+  if (loc.poi || loc.type === "location" && loc.id && !loc.address) {
+    p.set(`${prefix}.id`, loc.id || "");
+    p.set(`${prefix}.latitude`, lat);
+    p.set(`${prefix}.longitude`, lng);
+    p.set(`${prefix}.name`, loc.name || "");
+  } else {
+    // address
+    p.set(`${prefix}.latitude`, lat);
+    p.set(`${prefix}.longitude`, lng);
+    p.set(`${prefix}.address`, loc.address || loc.name || "");
+  }
+  return p.toString();
+}
+
+async function fetchJourney(from, to, timeParam) {
+  const fromQS = locToParams(from, "from");
+  const toQS = locToParams(to, "to");
+  const extra = new URLSearchParams({
+    results: "1",
+    stopovers: "false",
+    polylines: "false",
+    language: "de",
+  });
+  if (timeParam) extra.set(timeParam.kind, timeParam.iso);
+  const url = `${API}/journeys?${fromQS}&${toQS}&${extra.toString()}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("API " + res.status);
+  const data = await res.json();
+  return data.journeys?.[0] || null;
+}
+
+// ---------- Result rendering ----------
+function renderResults() {
+  const root = document.getElementById("resultsArea");
+  root.innerHTML = "";
+  if (state.error) {
+    root.innerHTML = `<div class="alert error">${escapeHtml(state.error)}</div>`;
+    return;
+  }
+  if (state.loading) {
+    root.innerHTML = `
+      <div class="results-head">
+        <span class="results-title">Suche läuft…</span>
+      </div>
+      <div class="loading-bar"></div>`;
+    return;
+  }
+  if (!state.results) return;
+
+  const valid = state.results.filter(r => r.journey);
+  const invalid = state.results.filter(r => !r.journey);
+  sortValid(valid);
+
+  const head = document.createElement("div");
+  head.className = "results-head";
+  head.innerHTML = `
+    <span class="results-title">${valid.length + invalid.length} Verbindungen · sortiert nach</span>
+    <div class="sort-toggle">
+      <button data-sort="arrival" aria-pressed="${state.sortBy === 'arrival'}">Früh. Ankunft</button>
+      <button data-sort="duration" aria-pressed="${state.sortBy === 'duration'}">Kürzeste Dauer</button>
+    </div>`;
+  head.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+    state.sortBy = b.dataset.sort;
+    persist();
+    renderResults();
+  }));
+  root.appendChild(head);
+
+  // Pagination buttons (top) — only when at least one pair has a journey
+  if (valid.length) {
+    root.appendChild(buildPagination("top"));
+  }
+
+  valid.forEach((r, i) => root.appendChild(buildResult(r, i, i === 0)));
+  invalid.forEach(r => {
+    const el = document.createElement("div");
+    el.className = "result";
+    el.innerHTML = `<div class="result-head" style="cursor:default">
+      <span class="rank">—</span>
+      <div class="od">
+        <span class="from-name">${escapeHtml(r.from.name)}</span>
+        <span class="arrow">→</span>
+        <span class="to-name">${escapeHtml(r.to.name)}</span>
+        <div class="od-meta" style="color:var(--red)">Keine Verbindung gefunden${r.error ? " · " + escapeHtml(r.error) : ""}</div>
+      </div>
+      <span></span>
+    </div>`;
+    root.appendChild(el);
+  });
+
+  // Pagination buttons (bottom) — convenience for after scrolling through results
+  if (valid.length) {
+    root.appendChild(buildPagination("bottom"));
+  }
+}
+
+function buildPagination(position) {
+  const wrap = document.createElement("div");
+  wrap.className = "results-pagination" + (position === "bottom" ? " is-bottom" : "");
+  wrap.innerHTML = `
+    <button class="page-btn" type="button" data-dir="earlier" aria-label="Frühere Verbindungen suchen">
+      <span aria-hidden="true">←</span> Früher
+    </button>
+    <button class="page-btn" type="button" data-dir="later" aria-label="Spätere Verbindungen suchen">
+      Später <span aria-hidden="true">→</span>
+    </button>`;
+  wrap.querySelectorAll(".page-btn").forEach(btn => {
+    btn.addEventListener("click", () => shiftResults(btn.dataset.dir));
+  });
+  return wrap;
+}
+
+async function shiftResults(direction) {
+  if (!state.results || state.loading) return;
+  const validJourneys = state.results.filter(r => r.journey);
+  if (!validJourneys.length) return;
+
+  // Fallback anchors for any pairs that previously failed.
+  const allDeps = validJourneys.map(r =>
+    new Date(r.journey.legs[0].departure || r.journey.legs[0].plannedDeparture).getTime()
+  );
+  const globalEarliestDep = Math.min(...allDeps);
+  const globalLatestDep = Math.max(...allDeps);
+
+  state.loading = true;
+  renderResults();
+
+  const newResults = await Promise.all(state.results.map(async (r) => {
+    let anchorMs;
+    if (r.journey) {
+      anchorMs = new Date(r.journey.legs[0].departure || r.journey.legs[0].plannedDeparture).getTime();
+    } else {
+      // For pairs without a current journey, anchor on the global edge.
+      anchorMs = direction === "later" ? globalLatestDep : globalEarliestDep;
+    }
+    let timeParam;
+    if (direction === "later") {
+      // Next departure strictly after the current one.
+      timeParam = { kind: "departure", iso: new Date(anchorMs + 60 * 1000).toISOString() };
+    } else {
+      // Journey arriving before the current departure — i.e. an earlier connection.
+      timeParam = { kind: "arrival", iso: new Date(anchorMs - 60 * 1000).toISOString() };
+    }
+    try {
+      const j = await fetchJourney(r.from, r.to, timeParam);
+      return { from: r.from, to: r.to, journey: j, error: j ? null : "Keine Verbindung in dieser Richtung" };
+    } catch (e) {
+      return { from: r.from, to: r.to, journey: null, error: e.message || "Fehler" };
+    }
+  }));
+
+  state.results = newResults;
+  state.loading = false;
+  renderResults();
+  // Scroll the user back to the top of the result list so they see the new picks.
+  document.getElementById("resultsArea").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function sortValid(arr) {
+  if (state.sortBy === "duration") {
+    arr.sort((a, b) => durationMs(a.journey) - durationMs(b.journey));
+  } else {
+    arr.sort((a, b) => new Date(arrTime(a.journey)) - new Date(arrTime(b.journey)));
+  }
+}
+
+function buildResult(r, idx, isBest) {
+  const j = r.journey;
+  const dep = j.legs[0];
+  const arr = j.legs[j.legs.length - 1];
+  const depTime = dep.departure || dep.plannedDeparture;
+  const depPlanned = dep.plannedDeparture;
+  const depDelay = dep.departureDelay || 0;
+  const arrTimeISO = arr.arrival || arr.plannedArrival;
+  const arrPlanned = arr.plannedArrival;
+  const arrDelay = arr.arrivalDelay || 0;
+  const transfers = j.legs.filter(l => !l.walking).length - 1;
+
+  const wrap = document.createElement("div");
+  wrap.className = "result" + (isBest ? " best" : "");
+  const head = document.createElement("div");
+  head.className = "result-head";
+  head.innerHTML = `
+    <span class="rank">${idx + 1}</span>
+    <div class="od">
+      <span class="from-name">${escapeHtml(r.from.name)}</span>
+      <span class="arrow">→</span>
+      <span class="to-name">${escapeHtml(r.to.name)}</span>
+      <div class="od-meta">${transfers} Umst. · ab ${fmtTime(depTime)}${dateSuffix(depTime)}</div>
+    </div>
+    <div class="times">
+      <div class="time">
+        ${depDelay ? `<span class="planned">${fmtTime(depPlanned)}</span>` : ""}
+        ${fmtTime(depTime)}
+        ${depDelay ? `<span class="delay">+${Math.round(depDelay/60)}</span>` : ""}
+        <span style="color:var(--fg-3)"> – </span>
+        ${arrDelay ? `<span class="planned">${fmtTime(arrPlanned)}</span>` : ""}
+        ${fmtTime(arrTimeISO)}
+        ${arrDelay ? `<span class="delay">+${Math.round(arrDelay/60)}</span>` : `<span class="ontime"> ●</span>`}
+      </div>
+      <div class="duration">${fmtDur(durationMs(j))}</div>
+    </div>`;
+  head.addEventListener("click", () => wrap.classList.toggle("open"));
+  wrap.appendChild(head);
+
+  // A walking leg with no time and no distance is just a same-platform transfer
+  // — render neither in the line badge bar nor in the details list.
+  const visibleLegs = j.legs.filter(leg => {
+    if (!leg.walking) return true;
+    const ms = new Date(leg.arrival || leg.plannedArrival) - new Date(leg.departure || leg.plannedDeparture);
+    const mins = Math.round(ms / 60000);
+    const dist = leg.distance || 0;
+    return mins > 0 || dist > 0;
+  });
+
+  const lines = document.createElement("div");
+  lines.className = "lines-row";
+  visibleLegs.forEach((leg, i) => {
+    if (i > 0) {
+      const sep = document.createElement("span");
+      sep.className = "line-sep";
+      sep.textContent = "›";
+      lines.appendChild(sep);
+    }
+    lines.appendChild(buildLineBadge(leg));
+  });
+  wrap.appendChild(lines);
+
+  const details = document.createElement("div");
+  details.className = "details";
+  visibleLegs.forEach(leg => {
+    details.appendChild(buildLeg(leg));
+  });
+  wrap.appendChild(details);
+
+  return wrap;
+}
+
+function buildLineBadge(leg) {
+  const span = document.createElement("span");
+  if (leg.walking) {
+    span.className = "line-badge walk";
+    const mins = Math.round((new Date(leg.arrival || leg.plannedArrival) - new Date(leg.departure || leg.plannedDeparture)) / 60000);
+    span.textContent = `${mins || "–"} min Fußweg`;
+    return span;
+  }
+  const product = leg.line?.product || "regional";
+  span.className = `line-badge p-${product}`;
+  span.textContent = leg.line?.name || product;
+  return span;
+}
+
+function buildLeg(leg) {
+  const div = document.createElement("div");
+  div.className = "leg";
+  if (leg.walking) {
+    const mins = Math.round((new Date(leg.arrival || leg.plannedArrival) - new Date(leg.departure || leg.plannedDeparture)) / 60000);
+    const meters = leg.distance || 0;
+    const oc = getCoords(leg.origin);
+    const dc = getCoords(leg.destination);
+    const clickable = !!(oc && dc);
+    // Build the badge label: "↳ 5 min · 382 m Fußweg" — adapts to what we know.
+    const parts = [];
+    if (mins) parts.push(`${mins} min`);
+    if (meters) parts.push(`${meters} m`);
+    const detail = parts.length ? parts.join(" · ") + " " : "";
+    const badgeText = `↳ ${detail}Fußweg`;
+    const badgeHtml = clickable
+      ? `<button class="leg-walk-badge" type="button"
+          data-origin-lat="${oc.lat}" data-origin-lng="${oc.lng}"
+          data-dest-lat="${dc.lat}" data-dest-lng="${dc.lng}"
+          data-dest-name="${escapeAttr(leg.destination?.name || "Ziel")}"
+          aria-label="Fußweg-Strecke in Google Maps öffnen">${escapeHtml(badgeText)}</button>`
+      : `<span class="leg-walk-static">${escapeHtml(badgeText)}</span>`;
+    div.innerHTML = `
+      <div class="leg-times">${fmtTime(leg.departure || leg.plannedDeparture)}<br>${fmtTime(leg.arrival || leg.plannedArrival)}</div>
+      <div class="leg-info">
+        <div>${badgeHtml}</div>
+        <div class="leg-stops">${escapeHtml(leg.origin?.name || "")} → ${escapeHtml(leg.destination?.name || "")}</div>
+      </div>`;
+    const btn = div.querySelector(".leg-walk-badge");
+    if (btn) {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation(); // don't toggle the result open/close
+        const url = buildMapsUrl(
+          parseFloat(btn.dataset.originLat), parseFloat(btn.dataset.originLng),
+          parseFloat(btn.dataset.destLat),   parseFloat(btn.dataset.destLng),
+          btn.dataset.destName
+        );
+        window.open(url, "_blank", "noopener,noreferrer");
+      });
+    }
+    return div;
+  }
+  const dep = leg.departure || leg.plannedDeparture;
+  const arr = leg.arrival || leg.plannedArrival;
+  const depDelay = leg.departureDelay || 0;
+  const arrDelay = leg.arrivalDelay || 0;
+  const platform = leg.departurePlatform || leg.plannedDeparturePlatform;
+  const platformArr = leg.arrivalPlatform || leg.plannedArrivalPlatform;
+  const lineHtml = `<span class="line-badge p-${leg.line?.product || "regional"}">${escapeHtml(leg.line?.name || "")}</span>`;
+  const tripId = leg.tripId || "";
+  const expandable = !!tripId;
+  div.innerHTML = `
+    <div class="leg-times">
+      <div class="top">${fmtTime(dep)}${depDelay ? ` <span class="delay">+${Math.round(depDelay/60)}</span>` : ""}</div>
+      <div>${fmtTime(arr)}${arrDelay ? ` <span class="delay">+${Math.round(arrDelay/60)}</span>` : ""}</div>
+    </div>
+    <div class="leg-info">
+      <div class="leg-line-row${expandable ? " expandable" : ""}">
+        ${lineHtml} <span style="color:var(--fg-2)">${escapeHtml(leg.direction || "")}</span>
+        ${expandable ? '<span class="leg-toggle" aria-hidden="true">▾</span>' : ""}
+      </div>
+      <div class="leg-stops">${escapeHtml(leg.origin?.name || "")}${platform ? ` · Gl. ${escapeHtml(platform)}` : ""} → <span class="leg-stop-end">${escapeHtml(leg.destination?.name || "")}</span>${platformArr ? ` · Gl. ${escapeHtml(platformArr)}` : ""}</div>
+      ${leg.remarks?.length ? `<div class="leg-meta">${leg.remarks.filter(r => r.type === "warning" || r.type === "status").slice(0,2).map(r => "⚠ " + escapeHtml(r.summary || r.text || "")).join(" · ")}</div>` : ""}
+      ${expandable ? '<div class="leg-stopovers" data-state="closed"></div>' : ""}
+    </div>`;
+  if (expandable) {
+    const lineRow = div.querySelector(".leg-line-row");
+    const stopBox = div.querySelector(".leg-stopovers");
+    lineRow.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      if (stopBox.dataset.state === "open") {
+        stopBox.dataset.state = "closed";
+        stopBox.innerHTML = "";
+        lineRow.querySelector(".leg-toggle").textContent = "▾";
+        return;
+      }
+      stopBox.dataset.state = "loading";
+      stopBox.innerHTML = '<div class="stopovers-loading">Lade Zwischenstationen…</div>';
+      lineRow.querySelector(".leg-toggle").textContent = "▴";
+      try {
+        const stopovers = await fetchStopovers(tripId);
+        stopBox.dataset.state = "open";
+        renderStopovers(stopBox, stopovers, leg);
+      } catch (err) {
+        stopBox.dataset.state = "error";
+        stopBox.innerHTML = `<div class="stopovers-error">Konnte Zwischenstationen nicht laden: ${escapeHtml(err.message || String(err))}</div>`;
+      }
+    });
+  }
+  return div;
+}
+
+const tripCache = new Map();
+async function fetchStopovers(tripId) {
+  if (tripCache.has(tripId)) return tripCache.get(tripId);
+  const url = `${API}/trips/${encodeURIComponent(tripId)}?stopovers=true&remarks=false&polyline=false`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  const data = await res.json();
+  const list = data?.trip?.stopovers || data?.stopovers || [];
+  tripCache.set(tripId, list);
+  return list;
+}
+
+// Identify the segment of stopovers between leg origin and leg destination,
+// since a tripId may include the whole route, not just our leg.
+function sliceStopoversForLeg(stopovers, leg) {
+  if (!stopovers.length) return stopovers;
+  const originId = leg.origin?.id;
+  const destId = leg.destination?.id;
+  let start = 0, end = stopovers.length - 1;
+  if (originId) {
+    const i = stopovers.findIndex(s => s.stop?.id === originId);
+    if (i >= 0) start = i;
+  }
+  if (destId) {
+    const i = stopovers.findIndex((s, k) => k > start && s.stop?.id === destId);
+    if (i >= 0) end = i;
+  }
+  return stopovers.slice(start, end + 1);
+}
+
+function renderStopovers(container, stopovers, leg) {
+  const slice = sliceStopoversForLeg(stopovers, leg);
+  if (!slice.length) {
+    container.innerHTML = '<div class="stopovers-error">Keine Stationsdaten verfügbar.</div>';
+    return;
+  }
+  const html = slice.map((s, i) => {
+    const stop = s.stop || {};
+    const arrISO = s.arrival || s.plannedArrival || s.departure || s.plannedDeparture;
+    const depISO = s.departure || s.plannedDeparture || s.arrival || s.plannedArrival;
+    const arrDelay = s.arrivalDelay || 0;
+    const isFirst = i === 0;
+    const isLast = i === slice.length - 1;
+    const showTime = isFirst ? (depISO ? fmtTime(depISO) : "—")
+                              : (arrISO ? fmtTime(arrISO) : "—");
+    const lat = stop.location?.latitude;
+    const lng = stop.location?.longitude;
+    const hasCoords = typeof lat === "number" && typeof lng === "number";
+    const cls = "stopover" + (isFirst || isLast ? " stopover-end" : "");
+    const timeCellHtml = `${showTime}${arrDelay && !isFirst ? ` <span class="delay">+${Math.round(arrDelay/60)}</span>` : ""}`;
+    return `<div class="${cls}">
+      <span class="stopover-time">${timeCellHtml}</span>
+      <span class="stopover-dot"></span>
+      <button class="stopover-name" type="button"
+        data-name="${escapeAttr(stop.name || "")}"
+        data-time="${escapeAttr(showTime)}"
+        data-lat="${hasCoords ? lat : ""}"
+        data-lng="${hasCoords ? lng : ""}"
+        aria-label="Stationsname vollständig anzeigen">${escapeHtml(stop.name || "")}</button>
+    </div>`;
+  }).join("");
+  container.innerHTML = html;
+  container.querySelectorAll(".stopover-name").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      showStopOverlay({
+        name: btn.dataset.name,
+        time: btn.dataset.time,
+        lat: btn.dataset.lat ? parseFloat(btn.dataset.lat) : null,
+        lng: btn.dataset.lng ? parseFloat(btn.dataset.lng) : null,
+      });
+    });
+  });
+}
+
+function showStopOverlay({ name, time, lat, lng }) {
+  hideStopOverlay();
+  const overlay = document.createElement("div");
+  overlay.className = "stop-overlay";
+  overlay.id = "stopOverlay";
+  const hasCoords = typeof lat === "number" && !isNaN(lat) && typeof lng === "number" && !isNaN(lng);
+  overlay.innerHTML = `
+    <div class="stop-overlay-card" role="dialog" aria-modal="true" aria-label="Stationsdetails">
+      <div class="stop-overlay-label">Haltestelle${time ? " · Ankunft " + escapeHtml(time) : ""}</div>
+      <div class="stop-overlay-name">${escapeHtml(name)}</div>
+      <div class="stop-overlay-actions">
+        ${hasCoords ? `<button type="button" class="primary" data-act="map">📍 In Google Maps öffnen</button>` : ""}
+        <button type="button" data-act="close">Schließen</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) hideStopOverlay();
+  });
+  overlay.querySelector('[data-act="close"]').addEventListener("click", hideStopOverlay);
+  const mapBtn = overlay.querySelector('[data-act="map"]');
+  if (mapBtn) {
+    mapBtn.addEventListener("click", () => {
+      const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lat + "," + lng)}&query_place_id=${encodeURIComponent(name)}`;
+      window.open(url, "_blank", "noopener,noreferrer");
+      hideStopOverlay();
+    });
+  }
+  document.addEventListener("keydown", overlayEscHandler);
+}
+function overlayEscHandler(e) {
+  if (e.key === "Escape") hideStopOverlay();
+}
+function hideStopOverlay() {
+  const o = document.getElementById("stopOverlay");
+  if (o) o.remove();
+  document.removeEventListener("keydown", overlayEscHandler);
+}
+
+function durationMs(j) {
+  return new Date(arrTime(j)) - new Date(depTime(j));
+}
+function depTime(j) { return j.legs[0].departure || j.legs[0].plannedDeparture; }
+function arrTime(j) { return j.legs[j.legs.length-1].arrival || j.legs[j.legs.length-1].plannedArrival; }
+
+function fmtTime(iso) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+}
+function fmtDur(ms) {
+  const min = Math.max(0, Math.round(ms / 60000));
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return h ? `${h}:${String(m).padStart(2,"0")} h` : `${m} min`;
+}
+function dateSuffix(iso) {
+  const d = new Date(iso);
+  const today = new Date();
+  if (d.toDateString() === today.toDateString()) return "";
+  const opts = { day: "2-digit", month: "2-digit" };
+  return ` · ${d.toLocaleDateString("de-DE", opts)}`;
+}
+
+// ---------- Initial render ----------
+renderSlots();
+</script>
+
+</body>
+</html>
